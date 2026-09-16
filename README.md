@@ -103,7 +103,14 @@ Inside this repository, use the bundled script:
 
 ```console
 npm install
-npm run epubsite -- book.epub
+# enable search of on the website
+npm run epubsite -- book.epub --search 
+# or not
+# npm run epubsite -- book.epub
+cd dist
+# host static website for your epub!
+surge . https://book-name.surge.sh/ 
+
 ```
 
 ---
@@ -111,7 +118,7 @@ npm run epubsite -- book.epub
 ## Usage
 
 ```
-epubsite <book.epub> [options]
+epubsite <book.epub> [options]s
 epubsite serve [dir]
 ```
 
