@@ -16,6 +16,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { chmod } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { build } from '../../src/build/build'
@@ -444,6 +445,23 @@ describe('build — refusals', () => {
     )
     expect(pages).toBeGreaterThan(0)
     expect(pages).toBeLessThanOrEqual(result.stats.chapters)
+  })
+
+  it('reports a search command that succeeds without writing an index (D.3)', async () => {
+    // Exit code zero is not evidence that an index exists, and this is the defect
+    // that shipped: an `npx` invoked without its arguments exits 0 having done
+    // nothing, so the build announced a successful search build and shipped a
+    // button with no index behind it. A stub that exits 0 and writes nothing
+    // reproduces exactly that, on both platforms.
+    const root = await workspace('silent-pagefind')
+    const windows = process.platform === 'win32'
+    const stub = join(root, windows ? 'noop.cmd' : 'noop.sh')
+    await writeFile(stub, windows ? '@exit /b 0\r\n' : '#!/bin/sh\nexit 0\n')
+    if (!windows) await chmod(stub, 0o755)
+
+    const { result } = await buildSite(sampleEpub(), { search: true, pagefind: stub })
+
+    expect(result.diagnostics.warnings.map((warning) => warning.code)).toContain('W_SEARCH_FAILED')
   })
 
   it('ships the icon and points the shell at it, with and without the SPA', async () => {

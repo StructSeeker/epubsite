@@ -68,6 +68,14 @@ export interface SearchOutcome {
  */
 const OUTPUT_DIR = `${RESERVED_PATHS.assetsDir}${SHELL_ASSETS.pagefindDir.replace(/\/$/, '')}`
 
+/**
+ * The file Pagefind always writes into its output directory.
+ *
+ * Used as evidence that an index was produced, because a zero exit code is not
+ * evidence of anything: the command can succeed having written nothing at all.
+ */
+const INDEX_ENTRY_FILE = 'pagefind-entry.json'
+
 export async function buildSearchIndex(
   options: SearchOptions,
   diagnostics: Diagnostics,
@@ -122,6 +130,21 @@ export async function buildSearchIndex(
     return { indexed: false, outputDir: '' }
   } finally {
     await rm(workspace, { recursive: true, force: true })
+  }
+
+  // Exit code zero is not evidence that an index exists. Pagefind can succeed
+  // having written nothing — and a command that is silently doing nothing,
+  // like an `npx` invoked without its arguments, exits 0 every time. Without this
+  // check the build reports a successful search build and ships a button that
+  // cannot work, which is precisely how that reached production.
+  if (!existsSync(join(outputPath, INDEX_ENTRY_FILE))) {
+    warn(
+      diagnostics,
+      'W_SEARCH_FAILED',
+      `Pagefind exited successfully but wrote no index to ${OUTPUT_DIR}. The site is ` +
+        'complete and correct; it simply has no search index.',
+    )
+    return { indexed: false, outputDir: '' }
   }
 
   return { indexed: true, outputDir: OUTPUT_DIR }
@@ -193,18 +216,23 @@ async function resolvePagefind(
   // `npx --no-install` first: it uses a copy that is already on the machine and
   // fails immediately otherwise, so the network is only touched when there is
   // genuinely nothing local.
+  // The arguments belong to the command, not to the probe. Returning a bare
+  // `{ file: NPX }` here made the real run a plain `npx`, which prints its usage
+  // and exits 0 — so the build reported success and shipped a search button with
+  // no index behind it.
   const probe = ['--version']
-  if (await canRun(NPX, ['--no-install', 'pagefind', ...probe])) {
-    return { file: NPX, args: [] }
-  }
-  if (await canRun(NPX, ['--yes', 'pagefind', ...probe])) {
+  const installed = ['--no-install', 'pagefind']
+  if (await canRun(NPX, [...installed, ...probe])) return { file: NPX, args: installed }
+
+  const fetched = ['--yes', 'pagefind']
+  if (await canRun(NPX, [...fetched, ...probe])) {
     warn(
       diagnostics,
       'W_SEARCH_DOWNLOADED',
       'no local Pagefind was found, so one is being fetched with npx. Install it in your ' +
         'project to make this build reproducible and offline.',
     )
-    return { file: NPX, args: [] }
+    return { file: NPX, args: fetched }
   }
 
   return null
