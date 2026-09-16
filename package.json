@@ -25,7 +25,7 @@
     "node": ">=20.11"
   },
   "bin": {
-    "epubsite": "./build/bin/epubsite.js"
+    "epubsite": "build/bin/epubsite.js"
   },
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
