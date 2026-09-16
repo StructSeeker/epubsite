@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I1 Spike</title>
+<style>
+  body { margin: 0; font: 16px/1.6 system-ui, sans-serif; }
+  #toc { position: fixed; inset-block: 0; inset-inline-start: 0; width: 220px; overflow: auto;
+         padding: .5rem; border-inline-end: 1px solid #ddd; }
+  #frame { margin-inline-start: 220px; }
+  #epub-content { padding: 1rem; max-width: 65ch; }
+  .spacer { height: 1400px; }
+</style>
+</head>
+<body hx-boost="true" hx-target="#epub-content" hx-swap="innerHTML show:top" hx-indicator="#progress">
+
+  <nav id="toc" aria-label="Contents">
+    <ol>
+      <li><a href="text/ch01.xhtml" data-shell>Chapter 1</a></li>
+      <li><a href="text/ch02.xhtml" data-shell>Chapter 2</a></li>
+      <li><a href="text/deep/part/ch03.xhtml" data-shell>Chapter 3 (deep)</a></li>
+      <!--
+        Negative control: deliberately NOT marked [data-shell], so the shell
+        leaves it relative. Navigating to it from a nested chapter must
+        double-prefix and 404 — proving the absolutization pass is necessary
+        rather than merely sufficient.
+      -->
+      <li><a href="text/ch02.xhtml" id="unfixed">Chapter 2 (not absolutized)</a></li>
+    </ol>
+  </nav>
+
+  <div id="frame">
+    <header id="toolbar">
+      <span id="book-title">I1 Spike</span>
+      <span id="progress" class="htmx-indicator">loading</span>
+    </header>
+    <main id="epub-content" tabindex="-1" aria-live="polite">
+      <h1>Landing page</h1>
+      <p>Click a sidebar link.</p>
+    </main>
+  </div>
+
+  <script type="module" src="spike-shell.js"></script>
+</body>
+</html>

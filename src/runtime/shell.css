@@ -1,0 +1,408 @@
+/*
+ * Shell styles (spec §5.5, §11.2).
+ *
+ * The first line is load-bearing, not decoration. Declaring `epub` before
+ * `shell` fixes the cascade order for the whole document, so every rule the book
+ * contributes — which the runtime injects wrapped in `@layer epub` — loses to
+ * every rule here regardless of selector specificity or source order. A book
+ * with `body { margin: 3em }` cannot move the reader's chrome.
+ *
+ * The `!important` declarations on `html` and `body` are a second layer of the
+ * same defence: they cover the case where the layer declaration is missing (an
+ * older cached stylesheet, a hand-edited site) or where a book's rule is itself
+ * `!important` and unlayered. Losing the layout is the one failure a reader
+ * cannot work around.
+ *
+ * Everything below is deliberately unthemed: `--theme` and the
+ * `prefers-color-scheme` palette land with the accessibility pass (P7). Adding
+ * colours now would mean a `data-theme` attribute with no reader.
+ */
+@layer epub, shell;
+
+@layer shell {
+  /*
+   * Theme (§11.2).
+   *
+   * `--theme auto` emits no attribute, so these defaults follow the operating
+   * system and keep following it if it changes at dusk. `light` and `dark` set
+   * `color-scheme`, which is what makes the choice explicit *and* correct for
+   * everything the page does not style itself — form controls, scrollbars, the
+   * browser's own focus rings.
+   *
+   * The two palettes live in one `light-dark()` per property rather than in two
+   * duplicated blocks, because duplicated palettes drift: somebody adds a colour
+   * to the light block, the dark block still works, and the difference is only
+   * visible to half the readers.
+   */
+  :root {
+    color-scheme: light dark;
+    --shell-fg: light-dark(#111, #e8e8e8);
+    --shell-bg: light-dark(#fff, #16181d);
+    --shell-surface: light-dark(#fafafa, #1d2027);
+    --shell-border: light-dark(#ddd, #333842);
+    --shell-control: light-dark(#ccc, #3a404b);
+    --shell-hover: light-dark(#ececec, #262b34);
+    --shell-current: light-dark(#e0e0e0, #313846);
+    --shell-muted: light-dark(#666, #9aa2b1);
+
+    /*
+     * Both panes are a fixed width, and a fixed-width column can only stay still
+     * if the text inside it may break. Without this a single long token makes the
+     * pane scroll sideways, and the offenders are entirely ordinary: a method
+     * name in a heading (`spec.add_development_dependency`), a path in a code
+     * sample (`/home/someuser/.local/share/mise/installs/ruby/3.1.6/…`).
+     *
+     * CSS breaks at spaces and hyphens, and at nothing else — not at `.`, `_` or
+     * `/` — so a 30-character identifier is one atomic word that nothing can
+     * wrap, and the pane has no option but to grow a horizontal scrollbar.
+     *
+     * `break-word` rather than `anywhere`: it breaks a word only when it would
+     * otherwise overflow, and leaves intrinsic sizing alone, so tables and floats
+     * still measure the way the book intended.
+     *
+     * Declared on `:root` because it is inherited, which covers book content the
+     * shell has never heard of as well as its own chrome.
+     */
+    overflow-wrap: break-word;
+
+    /*
+     * One line of toolbar controls, declared once.
+     *
+     * Two rules need this number and one of them is a layout invariant: the
+     * narrow-screen drawer is an overlay, and an overlay that covers the control
+     * which opens it cannot be closed again — which is exactly what happened,
+     * because the drawer covered the whole viewport height including the
+     * toolbar. The drawer therefore starts *below* the toolbar, and for that to
+     * mean anything the toolbar must be exactly this tall rather than
+     * approximately it.
+     *
+     * So the toolbar's height comes from this token and the drawer's top inset
+     * comes from the same token: they cannot drift apart, because there is only
+     * one number.
+     */
+    --shell-toolbar-height: 3.25rem;
+  }
+
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  html {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    /*
+     * `hidden` is not enough, and this is the second half of the layout fix.
+     *
+     * `overflow: hidden` removes the scrollbar but still creates a *scroll
+     * container*: `scrollIntoView`, and htmx's `show:top`, can still scroll it.
+     * That is how the toolbar came to sit 51px above the viewport — scrolling the
+     * chapter scrolled the whole body, which carried the toolbar with it. `clip`
+     * creates no scroll container at all, so the body genuinely cannot move.
+     *
+     * Written second, with no `@supports`, because an unsupported declaration is
+     * simply dropped: a browser without `clip` keeps the `hidden` above.
+     */
+    overflow: clip !important;
+  }
+
+  body {
+    display: grid !important;
+    /*
+     * `minmax(0, …)` on the flexible column for the same reason as the row below:
+     * a bare `1fr` track has an `auto` minimum, so one wide element inside a
+     * chapter — a `<pre>` in a programming book, say — makes the column wider
+     * than the viewport. The reader then sees the pane's right padding, which is
+     * their right margin, sitting off-screen.
+     */
+    grid-template-columns: 280px minmax(0, 1fr) !important;
+    /*
+     * The row has to be **definite**, and this one line was the whole defect.
+     *
+     * Left out, the single row is implicit and `auto`, i.e. sized by its
+     * contents. `#frame` then asked for `height: 100%` against a height derived
+     * from `#frame` itself — a cyclic reference, which CSS resolves by treating
+     * the percentage as `auto`. So a long chapter grew the row to the chapter's
+     * height, `1fr` inside `#frame` had no free space to distribute,
+     * `#epub-content`'s `overflow: auto` never engaged, and the two panes became
+     * one very tall page inside an `overflow: hidden` viewport.
+     *
+     * It looked correct on the landing page, which is short enough that the row
+     * stretched to the viewport anyway — which is why this survived review.
+     *
+     * `minmax(0, 1fr)` breaks the cycle twice over: the row is the container's
+     * height, and the explicit `0` minimum stops the contents from inflating it.
+     */
+    grid-template-rows: minmax(0, 1fr) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    overflow: clip !important;
+    font-family: system-ui, sans-serif;
+    line-height: 1.5;
+    color: var(--shell-fg);
+    background: var(--shell-bg);
+  }
+
+  /* ---------------------------------------------------------------- sidebar */
+
+  #toc {
+    grid-column: 1;
+    /* A grid item's automatic minimum size is its content, which would make this
+       pane grow rather than scroll. `0` lets the definite row above win. */
+    min-height: 0;
+    overflow: auto;
+    padding: 1rem;
+    border-inline-end: 1px solid var(--shell-border);
+    background: var(--shell-surface);
+  }
+
+  #toc ol {
+    margin: 0;
+    padding-inline-start: 1rem;
+    list-style: none;
+  }
+
+  #toc > ol {
+    padding-inline-start: 0;
+  }
+
+  #toc li {
+    margin-block: 0.15rem;
+  }
+
+  #toc a {
+    display: block;
+    padding: 0.2rem 0.35rem;
+    border-radius: 4px;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  #toc a:hover {
+    background: var(--shell-hover);
+  }
+
+  #toc a[aria-current='page'] {
+    background: var(--shell-current);
+    font-weight: 600;
+  }
+
+  #landmarks {
+    margin-block-start: 1.5rem;
+    padding-block-start: 0.75rem;
+    border-block-start: 1px solid var(--shell-border);
+    font-size: 0.9em;
+  }
+
+  #landmarks h2 {
+    margin: 0 0 0.4rem;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--shell-muted);
+  }
+
+  /* ------------------------------------------------------------- main frame */
+
+  #frame {
+    grid-column: 2;
+    display: grid;
+    /*
+     * The column is declared for the same reason as every other track here. Left
+     * implicit it is `auto`, and `auto` is sized by the widest thing inside —
+     * which was the toolbar, whose flex items do not wrap. The frame then sat
+     * 11px wider than the viewport at 500px, pushing `#epub-content`'s right
+     * padding, the reader's right margin, past the edge of the screen.
+     */
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    min-width: 0;
+    /* Deliberately **no** `height: 100%`. The row above is definite and
+       `align-self: stretch` fills it; a percentage here is what caused the
+       defect, because it was a percentage against this element's own contents. */
+    min-height: 0;
+  }
+
+  #toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    /* Exactly the token, border included, so the drawer's top inset lands on
+       this element's bottom edge rather than near it. */
+    box-sizing: border-box;
+    height: var(--shell-toolbar-height);
+    border-block-end: 1px solid var(--shell-border);
+    background: var(--shell-bg);
+  }
+
+  #book-title {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #toolbar button {
+    font: inherit;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--shell-control);
+    border-radius: 4px;
+    background: var(--shell-bg);
+    color: inherit;
+    cursor: pointer;
+  }
+
+  /* htmx toggles `.htmx-request` on the element named by `hx-indicator`. htmx's
+     own stylesheet is not vendored — only its module is — so the visibility rule
+     has to live here, or the indicator would be visible permanently. */
+  #progress {
+    margin-inline-start: auto;
+    color: var(--shell-muted);
+    font-size: 0.9em;
+    visibility: hidden;
+  }
+
+  #progress.htmx-request {
+    visibility: visible;
+  }
+
+  #epub-content {
+    /*
+     * Horizontal scrolling is allowed, but only because of the two `minmax(0, …)`
+     * declarations above: the pane is now exactly the width of the viewport, so
+     * its right padding is a stable right margin for everything that fits —
+     * which is nearly everything — and anything wider is scrollable rather than
+     * clipped.
+     *
+     * It is also the backstop for content `overflow-wrap` cannot reflow: a book
+     * that sets `white-space: pre` on its code keeps its lines intact and scrolls,
+     * which is preferable to us silently restyling the book's code.
+     *
+     * An earlier attempt made this `hidden` and gave the overflow to `<pre>` and
+     * `<table>`. It lasted one book: Apress puts its code in `<div
+     * class="ProgramCode">`, which the list did not mention, so long lines became
+     * unreachable. A hand-maintained list of "things that can be wide" is always
+     * incomplete, and being unable to read the end of a line is worse than a
+     * scrollbar.
+     */
+    overflow: auto;
+    min-height: 0;
+    max-width: 65ch;
+    line-height: 1.7;
+    padding: 1rem 1.25rem 4rem;
+    outline: none;
+  }
+
+  #epub-content img,
+  #epub-content svg,
+  #epub-content video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* ---------------------------------------------------------------- utility */
+
+  .skip-link {
+    position: absolute;
+    inset-inline-start: -9999px;
+    z-index: 10;
+    padding: 0.5rem 0.75rem;
+    background: var(--shell-bg);
+    color: var(--shell-fg);
+    border: 1px solid var(--shell-control);
+  }
+
+  .notice {
+    padding: 0.5rem 0.75rem;
+    border-inline-start: 3px solid var(--shell-control);
+    background: var(--shell-surface);
+    color: var(--shell-muted);
+  }
+
+  .skip-link:focus {
+    inset-inline-start: 0.5rem;
+    inset-block-start: 0.5rem;
+  }
+
+  #toc-toggle {
+    display: none;
+  }
+
+  /* ------------------------------------------------------------ narrow view */
+
+  @media (max-width: 40rem) {
+    body {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    #frame {
+      grid-column: 1;
+    }
+
+    #toc-toggle {
+      display: inline-block;
+    }
+
+    /*
+     * The drawer starts below the toolbar, and that is the whole fix for "there
+     * is no way to close it".
+     *
+     * `#toc-toggle` lives in the toolbar — and the drawer used to span the full
+     * viewport height, so opening it painted over the very button that opened
+     * it. The only way out was a page reload. Anchoring the panel below the
+     * toolbar keeps the trigger reachable, so the same control closes it. No
+     * second button, no Escape handler, no backdrop: one control and one boolean
+     * cannot disagree with each other.
+     */
+    #toc {
+      position: fixed;
+      inset-block-start: var(--shell-toolbar-height);
+      inset-block-end: 0;
+      inset-inline-start: 0;
+      z-index: 5;
+      width: min(85vw, 320px);
+      transform: translateX(-100%);
+      transition: transform 150ms ease-out;
+    }
+
+    /* One attribute drives the panel and the button, so they cannot disagree.
+       Logical properties would be nicer here, but `translateX` has no logical
+       equivalent that every target browser understands. */
+    html[data-drawer-open] #toc {
+      transform: translateX(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #toc {
+      transition: none;
+    }
+  }
+
+  /* ----------------------------------------------------------------- search */
+
+  /*
+   * The Component UI hides its close button above 640px, on the assumption that a
+   * desktop reader knows to press Escape. Two things are wrong with that here: a
+   * modal with no visible way out is a trap for anyone who does not know the key,
+   * and touch-screen laptops are desktop widths. So the control is shown at every
+   * width — it is the component's own button, wired by the component, so it works
+   * wherever it is visible.
+   *
+   * `!important` is required rather than stylistic: Pagefind's stylesheet is
+   * injected unlayered, and an unlayered normal declaration beats every layered
+   * one, so nothing in `@layer shell` can outrank it without this.
+   */
+  .pf-modal-close {
+    display: flex !important;
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "name": "epubsite",
+  "version": "0.1.0",
+  "description": "Zero-rewrite EPUB to static single-page reader. Ships an EPUB byte-for-byte and layers an htmx reading experience on top.",
+  "keywords": [
+    "epub",
+    "htmx",
+    "static-site",
+    "ebook",
+    "reader",
+    "pwa"
+  ],
+  "license": "MIT",
+  "author": "StructSeeker",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StructSeeker/epubsite.git"
+  },
+  "homepage": "https://github.com/StructSeeker/epubsite#readme",
+  "bugs": {
+    "url": "https://github.com/StructSeeker/epubsite/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "bin": {
+    "epubsite": "./build/bin/epubsite.js"
+  },
+  "main": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "import": "./build/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "build",
+    "vendor",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true})\"",
+    "vendor": "node scripts/vendor-htmx.mjs",
+    "prebuild": "npm run clean && npm run vendor",
+    "build": "tsup && node scripts/copy-assets.mjs",
+    "watch": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "pretest": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "pretest:e2e": "npm run build",
+    "test:e2e": "playwright test",
+    "epubsite": "node --enable-source-maps ./build/bin/epubsite.js",
+    "verify": "npm run build && npm run typecheck && npm run lint && npm run test && npm run test:e2e",
+    "prepublishOnly": "npm run verify"
+  },
+  "dependencies": {
+    "htmlparser2": "^12.0.0",
+    "yauzl": "^3.4.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.3",
+    "@types/yauzl": "^3.4.0",
+    "eslint": "^10.10.0",
+    "htmx.org": "2.0.10",
+    "pagefind": "^1.5.2",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^3.2.7"
+  }
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <title>Chapter 1</title>
+</head>
+<body>
+  <h1>Chapter 1</h1>
+
+  <p id="para1">chapter one body text</p>
+
+  <img id="pic" src="../Images/pic.png" alt="eager image one directory up"/>
+  <img id="lazy" src="../Images/lazy.png" loading="lazy" alt="lazy image one directory up"/>
+  <img id="local" src="ch01-local.png" alt="sibling image, no ../ segment"/>
+
+  <p><a id="fn-link" href="#fn1">note 1</a></p>
+  <p><a id="x-link" href="ch02.xhtml#sec2">cross-chapter link</a></p>
+  <p><a id="same-link" href="ch01.xhtml#para1">same chapter, with fragment</a></p>
+  <p><a id="deep-link" href="deep/part/ch03.xhtml">deeper chapter</a></p>
+
+  <p class="spacer">spacer forces the lazy image below the fold</p>
+
+  <p id="fn1">footnote 1</p>
+</body>
+</html>

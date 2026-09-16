@@ -1,0 +1,16 @@
+Font Awesome Free — attribution for icon.svg
+============================================
+
+icon.svg is an icon from Font Awesome Free, by @fontawesome.
+
+  Project    https://fontawesome.com
+  Licence    https://fontawesome.com/license/free
+  Icons      CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+  Copyright  2026 Fonticons, Inc.
+
+Attribution is a condition of CC BY 4.0, and it is carried inside the SVG itself
+as a comment on the first line, so it travels with the image wherever the image
+is copied — including into a generated site. This file says the same thing for
+anyone reading the package without opening the SVG.
+
+Everything else in this package is MIT; see the LICENSE at the package root.
