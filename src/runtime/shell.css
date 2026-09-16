@@ -195,6 +195,71 @@
     font-weight: 600;
   }
 
+  /* ------------------------------------------------- collapsible sections */
+
+  /*
+   * The row exists so the disclosure can sit *after* the label: leaves render a
+   * bare `<a>`, and a button placed before the label would indent every branch
+   * entry and break the column.
+   */
+  #toc .toc-row {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+  }
+
+  #toc .toc-row > a {
+    flex: 1;
+    /* Without this a long label refuses to shrink below its content and pushes
+       the disclosure off the edge of the sidebar. */
+    min-width: 0;
+  }
+
+  #toc .toc-disclosure {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--shell-muted);
+    cursor: pointer;
+    line-height: 0;
+  }
+
+  #toc .toc-disclosure:hover {
+    color: var(--shell-fg);
+    background: var(--shell-hover);
+    border-radius: 4px;
+  }
+
+  #toc .toc-disclosure svg {
+    display: block;
+    width: 0.9rem;
+    height: 0.9rem;
+    transition: transform 120ms ease-out;
+  }
+
+  /* Collapsed points along the inline axis. `rotate` is physical rather than
+     logical, so an RTL sidebar turns the chevron the same way an LTR one does —
+     cosmetic, and noted rather than solved. */
+  #toc [data-toc-branch][data-collapsed='true'] > .toc-row .toc-disclosure svg {
+    transform: rotate(-90deg);
+  }
+
+  #toc [data-toc-branch][data-collapsed='true'] > ol {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #toc .toc-disclosure svg {
+      transition: none;
+    }
+  }
+
   #landmarks {
     margin-block-start: 1.5rem;
     padding-block-start: 0.75rem;
@@ -286,7 +351,8 @@
    * would silently lose the padding it is setting here.
    */
   #toolbar #share,
-  #toolbar #search-open {
+  #toolbar #search-open,
+  #toolbar #toc-collapse {
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -296,7 +362,8 @@
   }
 
   #toolbar #share svg,
-  #toolbar #search-open svg {
+  #toolbar #search-open svg,
+  #toolbar #toc-collapse svg {
     display: block;
     width: 1.1rem;
     height: 1.1rem;

@@ -15,6 +15,7 @@
  * kind of bug that looks like a stylesheet problem for a long time.
  */
 import { clearStyles, syncJsonLd, syncStyles } from './head-slots'
+import { revealCurrent } from './toc'
 import type { ChapterData, ShellData } from './data'
 
 export interface ChapterSyncContext {
@@ -67,6 +68,9 @@ function highlight(key: string | null): void {
     if (link.dataset.key !== key) continue
     link.setAttribute('aria-current', 'page')
     highlighted = link
+    // A chapter inside a collapsed branch would be marked and invisible, so the
+    // sidebar would lose the one thing it is for. See `revealCurrent`.
+    revealCurrent(link)
     return
   }
 }

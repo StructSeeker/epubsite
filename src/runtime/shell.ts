@@ -22,6 +22,7 @@ import { syncChapter, type ChapterSyncContext } from './chapter'
 import { entryRequestUrl, entryUrl, resolveEntry } from './entry'
 import { wireShare } from './share'
 import { wireSearch } from './search'
+import { wireTocCollapse } from './toc'
 
 // 1. Frozen once, at module evaluation, before any navigation can re-base it.
 const SITE_ROOT = freezeSiteRoot()
@@ -34,6 +35,10 @@ absolutizeShell(SITE_ROOT)
 // reader should be able to open the table of contents even if the htmx module
 // never arrives.
 wireDrawer()
+
+// Likewise: collapsing a section is a local DOM operation with no dependency on
+// navigation, so it works even when the rest of the reader cannot load a chapter.
+wireTocCollapse()
 
 void start()
 

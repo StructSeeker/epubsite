@@ -94,6 +94,7 @@ ${renderToc(input)}
 <button id="toc-toggle" type="button" aria-expanded="true" aria-controls="toc">Contents</button>
 <span id="book-title">${model.title}</span>
 ${searchButton(input)}
+${collapseButton(input)}
 ${shareButton(spa)}
 <div id="progress" class="htmx-indicator" role="status">Loading…</div>
 </header>
@@ -142,6 +143,44 @@ function runtimeScript(spa: boolean): SafeHtml {
   if (!spa) return markSafe('')
   return html`<script type="module" src="${RESERVED_PATHS.assetsDir}${SHELL_ASSETS.shellJs}"></script>`
 }
+
+/**
+ * Collapse all.
+ *
+ * Emitted only when the table of contents actually has branches. Many books have
+ * a flat one, and a control that cannot do anything is worse than no control —
+ * the same reasoning that governs the search button's absence under `--no-spa`.
+ *
+ * The runtime turns it into a toggle: pressed once it collapses every section,
+ * and pressed again it expands them, because a collapse-only button is a dead
+ * control the moment there is nothing left to collapse.
+ */
+function collapseButton(input: ShellInput): SafeHtml {
+  if (!input.spa || !hasBranches(input.model)) return markSafe('')
+  return html`<button id="toc-collapse" type="button" data-shell-toc aria-label="Collapse all sections">${COLLAPSE_ALL_ICON}</button>`
+}
+
+/**
+ * Whether there is any nesting to collapse.
+ *
+ * Only the top level needs checking: a grandchild cannot exist without its parent
+ * having children, so if no top-level entry has any, the tree is flat.
+ */
+function hasBranches(model: BookModel): boolean {
+  return tableOfContents(model).some((node) => node.children.length > 0)
+}
+
+/**
+ * The sidebar's three symbols, drawn here for the same reasons as the toolbar's:
+ * they must inherit `currentColor` so `--theme` reaches them, and they must be
+ * this package's to license.
+ *
+ * `aria-hidden` throughout, because each symbol is decoration; the accessible
+ * name belongs to the button that carries it.
+ */
+const CHEVRON_ICON = html`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6"/></svg>`
+
+const COLLAPSE_ALL_ICON = html`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4.5l5 5 5-5"/><path d="M7 19.5l5-5 5 5"/></svg>`
 
 /**
  * The share button (§5.8).
@@ -251,7 +290,27 @@ function renderNavItem(node: NavNode, spa: boolean): SafeHtml {
       ? markSafe('')
       : html`<a href="${nodeHref(node)}"${linkAttrs(node, spa)}>${node.label}</a>`
 
-  return html`<li>${label}${renderNavList(node.children, spa)}</li>`
+  if (node.children.length === 0) return html`<li>${label}</li>`
+
+  // A disclosure control only where there is something to disclose, and only in
+  // the SPA. Without a runtime it would be a control that does nothing — the same
+  // reason the share and search controls are SPA-only.
+  const disclosure = spa
+    ? html`<button class="toc-disclosure" type="button" aria-expanded="true"${attr(
+        'aria-label',
+        // A grouping node has children but no label of its own, and an empty
+        // `aria-label` is worse than a generic one: it names nothing at all.
+        node.label === '' ? 'Section' : node.label,
+      )}>${CHEVRON_ICON}</button>`
+    : markSafe('')
+
+  // The disclosure sits *after* the label rather than before it, so that a leaf
+  // entry and a branch entry start their text at the same offset and the sidebar
+  // reads as one column. Putting it first would indent every branch label.
+  return html`<li data-toc-branch>
+<div class="toc-row">${label}${disclosure}</div>
+${renderNavList(node.children, spa)}
+</li>`
 }
 
 function renderLandmarks(nodes: readonly NavNode[], spa: boolean): SafeHtml {

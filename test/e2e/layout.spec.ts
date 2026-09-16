@@ -413,6 +413,94 @@ test('an 11-inch tablet is narrow in portrait and wide in landscape', async ({ p
   }
 })
 
+/**
+ * Collapsible sidebar sections.
+ *
+ * The fixture's table of contents is deliberately nested: a "Tall" branch holding
+ * eighty entries, so there is something real to collapse.
+ */
+test.describe('collapsible sections', () => {
+  async function ready(page: Page): Promise<void> {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.goto(`${baseURL}/epubsite.html`)
+    await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
+  }
+
+  /** The nested `<ol>` of the branch whose label is `Tall`. */
+  const nested = (page: Page) =>
+    page.locator('#toc [data-toc-branch]').first().locator('> ol')
+
+  const branch = (page: Page) => page.locator('#toc [data-toc-branch]').first()
+  const disclosure = (page: Page) => branch(page).locator('.toc-disclosure')
+
+  test('a section hides and reveals its children', async ({ page }) => {
+    await ready(page)
+    await expect(nested(page)).toBeVisible()
+
+    await disclosure(page).click()
+    await expect(nested(page)).toBeHidden()
+    // The state is markup, so it is observable rather than inferred from pixels.
+    await expect(branch(page)).toHaveAttribute('data-collapsed', 'true')
+
+    await disclosure(page).click()
+    await expect(nested(page)).toBeVisible()
+    await expect(branch(page)).toHaveAttribute('data-collapsed', 'false')
+  })
+
+  test('the disclosure reports its state', async ({ page }) => {
+    await ready(page)
+    await expect(disclosure(page)).toHaveAttribute('aria-expanded', 'true')
+    await disclosure(page).click()
+    await expect(disclosure(page)).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  test('collapse all folds every branch, and expands them again', async ({ page }) => {
+    await ready(page)
+
+    const all = page.locator('#toc-collapse')
+    await expect(all).toHaveAttribute('aria-label', 'Collapse all sections')
+
+    await all.click()
+    await expect(nested(page)).toBeHidden()
+    // Every branch, not just the first: a partial result would look like it worked
+    // while leaving later sections open.
+    const collapsed = await page.evaluate(
+      () =>
+        [...document.querySelectorAll('#toc [data-toc-branch]')].every(
+          (item) => item.getAttribute('data-collapsed') === 'true',
+        ),
+    )
+    expect(collapsed).toBe(true)
+
+    // The name has to follow, or a symbol button would claim to do the opposite
+    // of what it will do.
+    await expect(all).toHaveAttribute('aria-label', 'Expand all sections')
+
+    await all.click()
+    await expect(nested(page)).toBeVisible()
+    await expect(all).toHaveAttribute('aria-label', 'Collapse all sections')
+  })
+
+  test('arriving at a chapter reveals the branch that contains it', async ({ page }) => {
+    await ready(page)
+
+    await page.locator('#toc-collapse').click()
+    await expect(nested(page)).toBeHidden()
+
+    // "Tall" is the branch, so its own label survives collapsing; what re-opening
+    // restores is its children. The entry protocol is used because the sidebar
+    // links are exactly what a collapsed branch is hiding.
+    await page.goto(`${baseURL}/epubsite.html?p=%2FOEBPS%2Ftext%2Fch01.xhtml`)
+    await page.waitForFunction(() => document.title === 'Tall')
+
+    // A chapter marked `aria-current` inside a branch the reader cannot see into
+    // is the sidebar losing its only job.
+    await expect(branch(page)).toHaveAttribute('data-collapsed', 'false')
+    await expect(nested(page)).toBeVisible()
+    await expect(page.locator('#toc [aria-current="page"]')).toBeVisible()
+  })
+})
+
 test('Copy link works on the landing page, before any chapter is open', async ({ page }) => {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.setViewportSize({ width: 1280, height: 800 })
