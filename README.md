@@ -108,8 +108,8 @@ npm run epubsite -- book.epub --search
 # or not
 # npm run epubsite -- book.epub
 cd dist
-# host static website for your epub!
-surge . https://book-name.surge.sh/ 
+# host static website for your epub! (surge is an app help you deploy static website)
+surge . https://book-name-of-your-choice.surge.sh/ 
 
 ```
 
