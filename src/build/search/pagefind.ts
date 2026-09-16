@@ -370,15 +370,35 @@ function isBatchFile(file: string): boolean {
 /**
  * Quotes a command line for `cmd.exe`.
  *
- * `cmd` is not `sh` and its rules are stranger: `%` expands, `^` escapes outside
- * quotes, and an embedded `"` inside a quoted region is written by doubling it.
- * This is deliberately conservative — anything not plainly safe gets quoted —
- * because over-quoting costs nothing and under-quoting is a command injection.
+ * `cmd` is not `sh`, and its rules are stranger. What quoting does buy:
+ * whitespace and the metacharacters `& | < > ( ) ^ * , ; =` are neutralised, and
+ * an embedded `"` is written by doubling it.
+ *
+ * What quoting does **not** buy, and must not be assumed to: `%`. Percent
+ * expansion does not care about double quotes — `"%PATH%"` expands — and there is
+ * no way to escape a percent on a command line the way `%%` escapes one inside a
+ * batch file. So an argument containing `%` is *not* made safe by this function;
+ * it is merely quoted, and the expansion still happens.
+ *
+ * The consequence is a constraint on callers rather than a defect here: this
+ * helper may only ever be handed literals the program itself controls. The one
+ * caller satisfies that by construction — the batch path is reached only for
+ * `npx.cmd` with this module's own arguments, and the single piece of
+ * book-derived text, the index glob, travels in `pagefind.yml` instead of on a
+ * command line. Anything user-supplied added to that path later would be a
+ * command injection, and the quoting above would not save it.
  */
 function quoteCommandLine(parts: readonly string[]): string {
   return parts.map((part) => (isPlain(part) ? part : `"${part.replace(/"/g, '""')}"`)).join(' ')
 }
 
+/**
+ * True for arguments that need no quoting.
+ *
+ * `%` is listed for the opposite reason to the others: not because quoting fixes
+ * it, but because it marks an argument as one this function cannot make safe. See
+ * {@link quoteCommandLine}.
+ */
 function isPlain(part: string): boolean {
   return part !== '' && !/[\s"^&|<>()%!*,;=]/.test(part)
 }
