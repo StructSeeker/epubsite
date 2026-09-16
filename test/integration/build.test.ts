@@ -67,6 +67,33 @@ async function failure(run: () => Promise<unknown>): Promise<EpubSiteError> {
 }
 
 /**
+ * Runs `body`, collecting any Node warnings it emits.
+ *
+ * Used to pin DEP0190: search shells out to Pagefind, and passing an argument
+ * vector to a shell is both deprecated and the unsafe half of the API. The
+ * warning is emitted synchronously by `spawn`, so a listener around the whole
+ * build catches every call site. Without this a regression shows up only as
+ * noise on stderr, which is precisely the kind of thing nobody reads.
+ */
+async function collectingWarnings<T>(body: () => Promise<T>): Promise<{ value: T; warnings: string[] }> {
+  const warnings: string[] = []
+  // The code has to be read from `warning.code`: it is *not* part of the message,
+  // and Node only adds the `[DEP0190]` bracket when it formats a warning for
+  // stderr. Filtering on the message alone would silently never match, so the
+  // test would pass no matter what the code did.
+  const listener = (warning: Error & { code?: string }): void => {
+    warnings.push(`${warning.name}${warning.code === undefined ? '' : ` (${warning.code})`}: ${warning.message}`)
+  }
+
+  process.on('warning', listener)
+  try {
+    return { value: await body(), warnings }
+  } finally {
+    process.off('warning', listener)
+  }
+}
+
+/**
  * The shell's favicon `<link>`, as written.
  *
  * Extracted rather than compared whole because the tag's attribute set is
@@ -380,7 +407,14 @@ describe('build — refusals', () => {
   })
 
   it('produces a Pagefind index and a search control when it can (D.1, D.4)', async () => {
-    const { site, result } = await buildSite(sampleEpub(), { search: true })
+    const { value, warnings } = await collectingWarnings(() =>
+      buildSite(sampleEpub(), { search: true }),
+    )
+    const { site, result } = value
+
+    // The deprecation is emitted by any `spawn(…, { shell: true })` that is given
+    // an argument array, so this fails the moment one is reintroduced.
+    expect(warnings.filter((warning) => warning.includes('DEP0190'))).toEqual([])
     expect(result.stats.chapters).toBe(4)
 
     const shell = await readFile(join(site.out, RESERVED_PATHS.shell), 'utf8')
