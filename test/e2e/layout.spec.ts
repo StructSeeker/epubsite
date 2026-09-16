@@ -37,7 +37,12 @@ import { sampleEpub } from '../fixtures/zip-writer'
 import { writeEpub } from '../fixtures/tmp'
 
 const WORKER = process.env['TEST_PARALLEL_INDEX'] ?? '0'
-const workDir = resolve(process.cwd(), '.tmp', 'e2e-layout', `w${WORKER}`)
+// `<ppid>` because two suites can legitimately run at once: `prepublishOnly` runs
+// the whole browser suite, so publishing while testing starts a second one. Without
+// a per-run key both runs build into the same `.tmp/…/w0`, and each `beforeAll`
+// deletes the other run's site while it is being tested. The runner's process id is
+// what tells one run from another.
+const workDir = resolve(process.cwd(), '.tmp', 'e2e-layout', `${process.ppid}`, `w${WORKER}`)
 const siteDir = join(workDir, 'site')
 
 /** Comfortably taller than any viewport the tests use. */
@@ -167,7 +172,15 @@ async function openTallChapter(page: Page, width = 1280): Promise<Layout> {
   await page.setViewportSize({ width, height: 800 })
   await page.goto(`${baseURL}/epubsite.html`)
   await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  // `force` because this click asserts *navigation*, not reachability: if it never
+  // lands on the link, the wait for the chapter's last paragraph fails anyway.
+  //
+  // What it removes is Playwright's "stable" pre-check, which requires the
+  // element's box to be unchanged across two consecutive animation frames. That is
+  // a property of the machine's frame pacing rather than of this code, and it
+  // starves when a second suite runs at the same time — `prepublishOnly` runs the
+  // whole browser suite, so publishing while testing is enough to cause it.
+  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]', { force: true })
   await page.waitForFunction(
     () => (document.querySelector('#epub-content')?.textContent ?? '').includes('The very last'),
   )

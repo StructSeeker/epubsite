@@ -70,7 +70,9 @@ const NAV = `<?xml version="1.0" encoding="utf-8"?>
 // of them — so the site directory has to be per-worker or six builds race for
 // one path. Playwright exports the worker index for exactly this.
 const WORKER = process.env['TEST_PARALLEL_INDEX'] ?? '0'
-const workDir = resolve(process.cwd(), '.tmp', 'e2e', `w${WORKER}`)
+// Per-run as well as per-worker: see the note in layout.spec.ts. Two concurrent
+// suites sharing `.tmp/e2e/w0` delete each other's site mid-test.
+const workDir = resolve(process.cwd(), '.tmp', 'e2e', `${process.ppid}`, `w${WORKER}`)
 const siteDir = join(workDir, 'site')
 
 let server: RunningServer
