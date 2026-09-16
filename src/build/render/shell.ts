@@ -152,7 +152,7 @@ function runtimeScript(spa: boolean): SafeHtml {
  */
 function shareButton(spa: boolean): SafeHtml {
   if (!spa) return markSafe('')
-  return html`<button id="share" type="button" data-shell-share disabled>Copy link</button>`
+  return html`<button id="share" type="button" data-shell-share aria-label="Copy a link to this book" disabled>${LINK_ICON}</button>`
 }
 
 /**
@@ -166,8 +166,30 @@ function shareButton(spa: boolean): SafeHtml {
  */
 function searchButton(input: ShellInput): SafeHtml {
   if (!input.search || !input.spa) return markSafe('')
-  return html`<button id="search-open" type="button" data-shell-search>Search</button>`
+  return html`<button id="search-open" type="button" data-shell-search aria-label="Search this book">${SEARCH_ICON}</button>`
 }
+
+/**
+ * The toolbar's two symbols.
+ *
+ * Drawn here rather than taken from an icon set or a symbol font, for two
+ * reasons. They have to inherit `currentColor` so that `--theme` reaches them —
+ * a glyph from a font is at the mercy of whatever the reader's system supplies.
+ * And they have to be this package's to license: the favicon is already the one
+ * asset that is not MIT, and a second one for a magnifying glass would be a poor
+ * trade.
+ *
+ * The geometry is deliberately plain: a ring and a stroke for search, two
+ * interlocking hooks for a link. Both are drawn on a 24-unit grid with a 2-unit
+ * stroke so they sit at the same visual weight.
+ *
+ * `aria-hidden` on each, because the symbol carries no text. The button's
+ * accessible name comes from its `aria-label` — a symbol-only button without one
+ * is announced by a screen reader as nothing but "button".
+ */
+const SEARCH_ICON = html`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l4.5 4.5"/></svg>`
+
+const LINK_ICON = html`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M10.6 13.4a4 4 0 0 0 5.7 0l2.9-2.9a4 4 0 1 0-5.7-5.7l-1.4 1.4"/><path d="M13.4 10.6a4 4 0 0 0-5.7 0l-2.9 2.9a4 4 0 1 0 5.7 5.7l1.4-1.4"/></svg>`
 
 function metaDescription(model: BookModel): SafeHtml {
   const description = model.opf.metadata.description

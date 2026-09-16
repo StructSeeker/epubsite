@@ -329,6 +329,78 @@ test('neither pane scrolls sideways, even for tokens CSS cannot break at spaces'
   expect(layout.toc.scrollWidth - layout.toc.clientWidth).toBeLessThanOrEqual(1)
 })
 
+test('a copy attempt reports itself without destroying the icon', async ({ page }) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto(`${baseURL}/epubsite.html`)
+  await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
+
+  const button = page.locator('#share')
+  await button.click()
+
+  // The message used to be written into the button's text. For a symbol button
+  // that means deleting the symbol, so the icon has to still be there afterwards —
+  // this is the assertion that fails if anyone goes back to `textContent`.
+  await expect(button).toHaveAttribute('data-flash', /./)
+  await expect(button.locator('svg')).toBeVisible()
+  await expect(button).toHaveAttribute('aria-label', 'Copy a link to this book')
+
+  // Whichever way the clipboard went: "Link copied" and "Copy failed" both count,
+  // because what is under test is the reporting, not the permission.
+  expect(['Link copied', 'Copy failed']).toContain(await button.getAttribute('data-flash'))
+
+  // And it clears itself.
+  await expect.poll(() => button.getAttribute('data-flash')).toBeNull()
+})
+
+test('the toolbar symbols are buttons with accessible names, not text', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto(`${baseURL}/epubsite.html`)
+  await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
+
+  // A symbol-only control has to get its name from somewhere. Without an
+  // `aria-label` a screen reader announces the whole thing as "button", and the
+  // icon is `aria-hidden` precisely because it carries no text of its own.
+  for (const { selector, name } of [
+    { selector: '#search-open', name: 'Search this book' },
+    { selector: '#share', name: 'Copy a link to this book' },
+  ]) {
+    const button = page.locator(selector)
+    await expect(button).toHaveAttribute('aria-label', name)
+    await expect(button.locator('svg')).toBeVisible()
+    // Nothing to read: the icon is drawn, not typeset.
+    expect((await button.innerText()).trim()).toBe('')
+  }
+})
+
+test('an 11-inch tablet is narrow in portrait and wide in landscape', async ({ page }) => {
+  // 800x1280 is what a Samsung 11" panel reports held upright: 2560x1600 at
+  // DPR 2. The old 640px threshold called that a desktop, so the screen with the
+  // least horizontal room got the layout that wants the most.
+  const cases = [
+    { width: 800, height: 1280, narrow: true },
+    { width: 1280, height: 800, narrow: false },
+  ]
+
+  for (const { width, height, narrow } of cases) {
+    await page.setViewportSize({ width, height })
+    await page.goto(`${baseURL}/epubsite.html`)
+    await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
+
+    const drawerX = (): Promise<number> =>
+      page.evaluate(() => (document.querySelector('#toc') as HTMLElement).getBoundingClientRect().x)
+
+    if (narrow) {
+      await expect(page.locator('#toc-toggle'), `at ${width}px`).toBeVisible()
+      // The drawer exists but is off-screen until asked for.
+      await expect.poll(drawerX).toBeLessThan(0)
+    } else {
+      await expect(page.locator('#toc-toggle'), `at ${width}px`).toBeHidden()
+      await expect.poll(drawerX).toBe(0)
+    }
+  }
+})
+
 test('Copy link works on the landing page, before any chapter is open', async ({ page }) => {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.setViewportSize({ width: 1280, height: 800 })

@@ -27,22 +27,17 @@ export interface ShareContext {
   readonly root: URL
 }
 
-/** Captured once: the label is copy, and re-reading it after a flash would
- * capture the flash text as the label. */
-let label = ''
-
 export function wireShare(context: ShareContext): void {
   const button = document.getElementById('share')
   if (button === null) return
-  label = button.textContent ?? ''
 
   button.addEventListener('click', () => {
     void copy(context, button)
   })
 
   syncEnabled(button)
-  // The button's label has to come back after a flash if the reader navigates
-  // while it is showing, so it follows the same events the chapter sync does.
+  // The button's state has to be re-asserted if a navigation interrupts a flash,
+  // so it follows the same events the chapter sync does.
   document.body.addEventListener('htmx:afterSwap', () => syncEnabled(button))
   document.body.addEventListener('htmx:historyRestore', () => syncEnabled(button))
 }
@@ -90,15 +85,23 @@ function isChapter(context: ShareContext): boolean {
 /** Enabled from the moment the runtime is running, on every page. */
 function syncEnabled(button: HTMLElement): void {
   button.removeAttribute('disabled')
-  button.textContent = label
 }
 
 let restore: number | undefined
 
+/**
+ * Shows a short message beside the button.
+ *
+ * The button is a symbol, so the message cannot be written into its text: doing
+ * that would delete the icon, and putting the icon back afterwards means
+ * re-creating markup that the stylesheet and the `aria-label` would then have to
+ * agree with. The message goes into a data attribute and the stylesheet draws it,
+ * which leaves the button's own content — and its accessible name — untouched.
+ */
 function flash(button: HTMLElement, message: string): void {
-  button.textContent = message
+  button.dataset['flash'] = message
   window.clearTimeout(restore)
   restore = window.setTimeout(() => {
-    button.textContent = label
+    delete button.dataset['flash']
   }, 1500)
 }

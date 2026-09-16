@@ -275,6 +275,57 @@
     visibility: visible;
   }
 
+  /* ------------------------------------------------------- toolbar symbols */
+
+  /*
+   * The search and share controls carry symbols rather than words, so they need a
+   * square hit area and an icon that takes its colour from the button.
+   *
+   * `#toolbar #…` rather than a bare `#…`: the shared `#toolbar button` rule above
+   * is an id plus a type selector, which outranks a lone id, so a plain `#share`
+   * would silently lose the padding it is setting here.
+   */
+  #toolbar #share,
+  #toolbar #search-open {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem;
+    line-height: 0;
+  }
+
+  #toolbar #share svg,
+  #toolbar #search-open svg {
+    display: block;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  /*
+   * "Link copied".
+   *
+   * Drawn here rather than written into the button, because the button's content
+   * *is* the icon: assigning `textContent` would delete it. `attr()` keeps the
+   * message out of the markup as well, so the DOM the runtime manipulates holds
+   * no presentation.
+   */
+  #share[data-flash]::after {
+    content: attr(data-flash);
+    position: absolute;
+    inset-block-start: calc(100% + 0.35rem);
+    inset-inline-end: 0;
+    z-index: 20;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--shell-control);
+    border-radius: 4px;
+    background: var(--shell-surface);
+    color: var(--shell-fg);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
   #epub-content {
     /*
      * Horizontal scrolling is allowed, but only because of the two `minmax(0, …)`
@@ -339,7 +390,21 @@
 
   /* ------------------------------------------------------------ narrow view */
 
-  @media (max-width: 40rem) {
+  /*
+   * 52.5rem = 840px, and the number is a device measurement rather than a taste.
+   *
+   * An 11-inch tablet held upright reports roughly 800 CSS pixels of width —
+   * Samsung's 11" panels are 2560x1600 at DPR 2, which is 800x1280 in portrait —
+   * and the 11" iPad Pro reports 834. The previous 640px threshold called both of
+   * those desktops, so a tablet in portrait got the permanent sidebar and no
+   * drawer: the layout that wants the most horizontal room, applied to the screen
+   * that has the least. 840 clears both with a little margin for browser chrome,
+   * and stays well below the 1024px and up where laptop and desktop windows live.
+   *
+   * Landscape orientation falls out of this for free: the same 11" tablet reports
+   * 1280 wide when turned, which is above the threshold and gets the sidebar.
+   */
+  @media (max-width: 52.5rem) {
     body {
       grid-template-columns: minmax(0, 1fr) !important;
     }
