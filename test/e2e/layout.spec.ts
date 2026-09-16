@@ -66,16 +66,16 @@ test.afterAll(async () => {
   await server?.close()
 })
 
-function tallChapter(): string {
+function tallChapter(heading = 'Tall'): string {
   const body = Array.from(
     { length: PARAGRAPHS },
     (_, index) => `<p>Paragraph ${index} of a deliberately long chapter.</p>`,
   ).join('\n')
   return `<?xml version="1.0" encoding="utf-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml">
-<head><title>Tall</title></head>
+<head><title>${heading}</title></head>
 <body>
-<h1>Tall</h1>
+<h1>${heading}</h1>
 ${body}
 <p>A filesystem path cannot be broken at a space, and CSS does not treat a slash
 as a line-break opportunity either:
@@ -109,11 +109,10 @@ function buildFixture(): Buffer {
   return sampleEpub({
     'OEBPS/nav.xhtml': tallNav(),
     'OEBPS/text/ch01.xhtml': tallChapter(),
-    'OEBPS/text/ch02.xhtml': `<?xml version="1.0" encoding="utf-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head><title>Short</title></head>
-<body><h1>Short</h1><p>Brief.</p></body>
-</html>`,
+    // Also tall, and deliberately so. A scroll-position test needs a destination
+    // that can hold an offset: against a short chapter the pane clamps back to 0
+    // by itself, and the assertion passes whatever the code does.
+    'OEBPS/text/ch02.xhtml': tallChapter('Short'),
   })
 }
 
@@ -428,6 +427,37 @@ test('Copy link works on the landing page, before any chapter is open', async ({
   // working way to send someone the book.
   const copied = await page.evaluate(() => navigator.clipboard.readText())
   expect(copied).toBe(`${baseURL}/epubsite.html`)
+})
+
+test('a chapter opens at its own top when the URL names no anchor', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto(`${baseURL}/epubsite.html`)
+  await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
+
+  const paneScrollTop = (): Promise<number> =>
+    page.evaluate(() =>
+      Math.round((document.querySelector('#epub-content') as HTMLElement).scrollTop),
+    )
+
+  // Read partway down the long chapter…
+  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]', { force: true })
+  await page.waitForFunction(() =>
+    (document.querySelector('#epub-content')?.textContent ?? '').includes('The very last'),
+  )
+  await page.evaluate(() => {
+    ;(document.querySelector('#epub-content') as HTMLElement).scrollTop = 3000
+  })
+  await expect.poll(paneScrollTop).toBeGreaterThan(0)
+
+  // …then open a different chapter, whose URL names no anchor.
+  await page.click('#toc a[data-key="OEBPS/text/ch02.xhtml"]', { force: true })
+  await page.waitForFunction(() => document.title === 'Short')
+
+  expect(new URL(page.url()).hash).toBe('')
+  // htmx's `show:top` cannot do this: `show` scrolls the *document*, and under I6
+  // the document never scrolls — the chapter scrolls inside its own pane. So the
+  // pane kept the previous chapter's offset and the new one opened partway down.
+  await expect.poll(paneScrollTop).toBe(0)
 })
 
 test('the favicon survives the document URL moving', async ({ page }) => {

@@ -48,6 +48,17 @@ void start()
  */
 let entryInFlight = false
 
+/**
+ * Set while htmx is restoring a history entry, i.e. the reader pressed Back.
+ *
+ * Going back is not opening a chapter: the reader is returning to somewhere they
+ * already were, so the pane must not be forced back to the top. The flag is set
+ * by `htmx:historyRestore` and consumed by the next `htmx:afterSettle`, which is
+ * the only place it is read — and if a restore never settles, the module was
+ * reloaded and the flag starts false again anyway.
+ */
+let restoringHistory = false
+
 async function start(): Promise<void> {
   // 3. The entry decision and the state replacement, before any content is
   //    parsed. From here on the document base is the chapter's directory, which
@@ -200,7 +211,32 @@ function wireNavigation(): void {
 
   // §5.7: a fragment does not participate in a swap, so the browser never
   // scrolls to it on its own after a cross-chapter jump.
-  document.body.addEventListener('htmx:afterSettle', () => scrollToFragment())
+  //
+  // §5.10: and with **no** fragment the chapter has to start at its own top. This
+  // cannot be left to htmx's `show:top`, which the swap spec asks for: `show`
+  // scrolls the *document*, and the document never scrolls here — the chapter
+  // scrolls inside its own pane. So the pane simply kept whatever offset the
+  // previous chapter was left at, and opening a chapter from partway down another
+  // one landed the reader partway down it too.
+  document.body.addEventListener('htmx:historyRestore', () => {
+    restoringHistory = true
+  })
+
+  document.body.addEventListener('htmx:afterSettle', () => {
+    if (restoringHistory) {
+      restoringHistory = false
+      scrollToFragment()
+      return
+    }
+
+    if (location.hash.length >= 2) {
+      scrollToFragment()
+      return
+    }
+
+    const pane = document.getElementById('epub-content')
+    if (pane !== null) pane.scrollTop = 0
+  })
 }
 
 /**
@@ -209,7 +245,7 @@ function wireNavigation(): void {
  * Without it a keyboard or screen-reader user follows a sidebar link and stays
  * focused in the sidebar, so Tab walks back through the reader's chrome before
  * reaching the chapter they just opened. `preventScroll` keeps this from
- * fighting `show:top`.
+ * fighting the scroll position the navigation settles on.
  */
 function focusContent(): void {
   document.getElementById('epub-content')?.focus({ preventScroll: true })
