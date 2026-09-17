@@ -15,6 +15,7 @@
  * kind of bug that looks like a stylesheet problem for a long time.
  */
 import { clearStyles, syncJsonLd, syncStyles } from './head-slots'
+import { withChapterUrls } from './chapter-urls'
 import { revealCurrent } from './toc'
 import type { ChapterData, ShellData } from './data'
 
@@ -46,7 +47,15 @@ export function syncChapter(context: ChapterSyncContext, key: string | null): vo
   }
 
   syncStyles(chapter, context.root)
-  syncJsonLd(chapter.jsonld)
+  // The chapter node is decorated with the addresses the reader actually arrived
+  // at (§7.3). It happens here rather than in `syncJsonLd`, which stays a DOM-slot
+  // module that knows nothing about URLs, and here rather than at build time,
+  // because where the site is being *served* is only knowable at runtime.
+  syncJsonLd(
+    chapter.jsonld === undefined
+      ? undefined
+      : withChapterUrls(chapter.jsonld, new URL(location.href)),
+  )
   syncBodyAttrs(context, chapter)
   document.title = chapter.title
 }

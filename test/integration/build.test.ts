@@ -644,6 +644,56 @@ describe('build — structured data (§7, A.1, C.7)', () => {
     expect(book.hasPart[0]?.url).toBe('https://example.com/books/OEBPS/text/ch01.xhtml')
   })
 
+  it('writes a chapter path containing a space as a URL, not as a file name (§7.5)', async () => {
+    // `entryPath` is the name as it appears in the zip; `url` must be a URL, and a
+    // literal space is not one. The runtime computes its own address from
+    // `location.href`, which is always the encoded spelling — so an unencoded
+    // build value would name the same chapter twice, under two spellings, and the
+    // runtime's "already present, skip it" check would not recognise it.
+    const spaced = 'text/ch 04.xhtml'
+    // The OPF href is relative to the OPF's own directory; the entry path is not.
+    const entry = `OEBPS/${spaced}`
+    const ebook = sampleEpub({
+      'OEBPS/content.opf': sampleOpf()
+        .replace(
+          '<item id="deep" href="text/deep/ch03.xhtml" media-type="application/xhtml+xml"/>',
+          '<item id="deep" href="text/deep/ch03.xhtml" media-type="application/xhtml+xml"/>\n' +
+            `    <item id="spaced" href="${spaced}" media-type="application/xhtml+xml"/>`,
+        )
+        .replace('<itemref idref="deep"/>', `<itemref idref="deep"/>\n    <itemref idref="spaced"/>`),
+      'OEBPS/text/ch 04.xhtml': `<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>Spaced</title></head>
+<body><h1>Spaced</h1></body>
+</html>`,
+    })
+
+    const { site } = await buildSite(ebook, {
+      baseUrl: { form: 'absolute', href: 'https://example.com/books/' },
+    })
+    const shell = (await readTree(site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
+    const book = bookNodeOf(shell)
+
+    const part = book.hasPart.find((entry) => entry.name === 'Spaced')
+    expect(part?.url).toBe('https://example.com/books/OEBPS/text/ch%2004.xhtml')
+
+    // The same address a browser would put in `location.href`, which is what the
+    // runtime compares against. Asserting the two agree here is the whole point:
+    // it is what keeps the runtime from appending a second spelling.
+    expect(part?.url).toBe(new URL(entry, 'https://example.com/books/').href)
+
+    // And `shell-data.json` is still keyed by the path as it appears in the zip,
+    // because that is what `location.pathname` decodes to when the runtime looks
+    // the chapter up.
+    const data = JSON.parse(
+      (await readTree(site.out))
+        .get('_epubsite_assets/shell-data.json')
+        ?.content.toString('utf8') ?? '{}',
+    ) as { byKey: Record<string, unknown> }
+
+    expect(Object.keys(data.byKey)).toContain('OEBPS/text/ch 04.xhtml')
+  })
+
   it('emits a REC-conformant manifest, with descriptive properties at the top level', async () => {
     const { site } = await buildSite()
     const publication = await readJson(site.out, 'publication.json')

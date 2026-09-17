@@ -76,14 +76,18 @@ makes the reader's assets and links resolve correctly:
 epubsite moby-dick.epub --base-url /books/moby/ -o public
 ```
 
-With a full URL, the build can *also* emit a canonical link, a JSON-LD `url` and
-an `og:image`:
+With a full URL, the build can *also* emit a canonical link, `og:image`, and the
+chapter nodes' static `url`: it knows the origin, so it can write an absolute
+address instead of leaving the field out.
 
 ```console
 epubsite moby-dick.epub --base-url https://example.com/books/moby/
 ```
 
 A path-only base URL cannot produce those, because it does not know the origin.
+
+Either way, the reader itself fills `url` in at runtime — see
+[the token protocol](#the-token-protocol-shareable-deep-links) below.
 
 ### Adding search
 
@@ -126,7 +130,7 @@ epubsite moby-dick.epub --dry-run --json | jq '.stats'
 |---|---|---|
 | `-o, --out <dir>` | `./dist` | Output directory, relative to your shell's cwd. |
 | `--name <file>` | `epubsite.html` | Name of the reader shell. Must not be `index.html`. |
-| `--base-url <url>` | `/` | Where the site will be deployed. Path form (`/sub/`) or absolute (`https://host/sub/`), which additionally enables canonical, JSON-LD `url` and `og:image`. |
+| `--base-url <url>` | `/` | Where the site will be deployed. Path form (`/sub/`) or absolute (`https://host/sub/`), which additionally enables canonical, the *static* JSON-LD `url` and `og:image`. |
 | `--hosting <mode>` | `404` | `none` \| `404` \| `rewrite` \| `all`. See [Hosting](#hosting). |
 | `--json-ld <mode>` | `full` | `full` \| `thin` \| `none`. How much Schema.org data to emit. |
 | `--no-json-ld` | | Shorthand for `--json-ld none`. |
@@ -211,7 +215,7 @@ namespace, rather than silently overwriting part of your book.
 | **Per-chapter styles, restored** | Each chapter's own stylesheet links, `@import`s, inline `<style>`, `body` class, `lang` and `dir` are reapplied as you navigate — the book looks the way its publisher intended, chapter by chapter. |
 | **Shareable deep links** | A link to `/EPUB/text/@ch01.xhtml` enters the reader at the right chapter, then rewrites the address bar to the honest path. Copy the link button gives a URL that always works. |
 | **Full-text search** | `--search` builds a Pagefind index over the spine. Results are highlighted and clicking one stays *inside* the reader. |
-| **Structured data** | Schema.org `Book` / `Chapter` JSON-LD, plus a `publication.json` Web Publication Manifest. |
+| **Structured data** | Schema.org `Book` / `Chapter` JSON-LD, plus a `publication.json` Web Publication Manifest. Each chapter's `url` lists both addresses it is reachable at. |
 | **Theming** | `auto` / `light` / `dark`, implemented with `light-dark()` and `color-scheme` so it follows the OS and can be overridden. |
 | **Fixed-layout books handled honestly** | Pre-paginated EPUBs cannot be reflowed by a shell, so the build degrades to the plain multi-page site and says so on the landing page instead of pretending. |
 | **Reference auditing** | The build reports external resources and links that escape the site root, so you know what will break offline. |
@@ -237,7 +241,9 @@ When the runtime loads, it:
 3. loads htmx and the shell data,
 4. enters a chapter if the URL asked for one,
 5. then, on every navigation, reapplies the chapter's styles, `lang`, `dir`,
-   `body` class and JSON-LD, and marks the current sidebar entry.
+   `body` class and JSON-LD — including the chapter's `url` array, which it
+   computes from the address you actually arrived at — and marks the current
+   sidebar entry.
 
 `hx-boost` handles link interception, with two deliberate exceptions: a link
 **within the chapter you are already reading** performs the fragment jump
@@ -276,6 +282,18 @@ someone — it works, with or without the shell.
 Without the guide — on a host that does not serve `404.html` for unknown paths —
 the `@` form simply 404s; the book's real chapter URLs still work exactly as
 before. The token protocol is an enhancement, never a dependency.
+
+Because both addresses reach the same chapter, the reader publishes both. When
+you are on a chapter, its JSON-LD node carries a `url` array holding the honest
+path *and* its `@` form, so a search engine sees that the chapter is reachable
+either way rather than indexing the bare page alone. The arrays are rebuilt on
+every navigation, and the landing page has no chapter node at all.
+
+The `@` address is never a canonical URL and never appears in `book.hasPart`.
+Canonical answers "where does this chapter live" — a question the `@` form would
+answer with a 404. A `url` entry answers "where else can it be reached", which is
+true of the `@` form by construction. The distinction is why one is emitted and
+the other is not.
 
 ### Hosting
 

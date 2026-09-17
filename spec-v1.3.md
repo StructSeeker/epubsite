@@ -8,6 +8,7 @@
 <blockquote>
 <p><b>本版是一次重写，不是增补。</b>v1.1 与 v1.2 从此冻结。v1.2 把改动记在文末附录 E 里，导致读者必须把正文和补丁表叠着读才能知道系统到底是什么样；v1.3 把 E.1–E.12 全部并入正文，并补齐了 v1.2 完全没写的那一类事实——<b>布局</b>：壳是一个两面板视口，它的正确性有自己的一组不变量，而这些不变量在实现中逐条以缺陷的形式暴露过。</p>
 <p>§1–§14 与附录 A–D 的<b>编号保持不变</b>，因为源码与测试里有大量形如「§5.4.3」「§8.2」「§D.2」的引用。新增内容一律追加到所在章的末尾（§1.4、§4.9、§5.9、§5.10、§5.11、§11.3），不改动既有编号。附录 E 保留为 v1.2 的历史记录，本版的修订记在附录 F。</p>
+<p><b>唯一例外：</b>章节节点的 <code>url</code> 改为数组之后，§5.8、§7.3、§7.5、§8.5 里原来说「令牌路径只用于剪贴板」的那几处断言不再成立，因此在<b>原地改写</b>。编号未动，改的是内容——把一段已被推翻的话留在原处，比改动它更糟。</p>
 <p><b>词汇约定：</b>「必须」= 违反即为缺陷；「应当」= 有正当理由可偏离，但须在代码里说明；「可以」= 实现自由。</p>
 </blockquote>
 
@@ -52,7 +53,7 @@
 <tr><td><b>章节文件</b></td><td>EPUB 内的 XHTML 文档（<code>spine</code> 中的项），原样复制到站点根</td></tr>
 <tr><td><b>内容区</b></td><td><code>#epub-content</code>，唯一被 htmx 交换的节点</td></tr>
 <tr><td><b>面板（pane）</b></td><td>壳里各自独立滚动的两个区域：<code>#toc</code> 与 <code>#epub-content</code>（§5.10）</td></tr>
-<tr><td><b>令牌路径</b></td><td>形如 <code>…/text/@ch3.xhtml</code> 的 URL：不对应任何真实文件，仅作为分享用的路由令牌</td></tr>
+<tr><td><b>令牌路径</b></td><td>形如 <code>…/text/@ch3.xhtml</code> 的 URL：不对应任何真实文件，作为分享与无障碍入口用的路由令牌。它也只在这一个意义上出现——不进 canonical，但会进运行期章节节点的 <code>url</code>（§7.3、§8.5）</td></tr>
 <tr><td><b>真实路径</b></td><td>形如 <code>…/text/ch3.xhtml</code> 的 URL：指向书里实际存在的文件</td></tr>
 <tr><td><b>保留命名空间</b></td><td>站点根下由构建期独占的路径集合（§3.2）</td></tr>
 <tr><td><b>文档基准</b></td><td>无 <code>&lt;base&gt;</code> 时的 <code>document.baseURI</code>，等于文档自身的 URL，每次访问时重新求值</td></tr>
@@ -313,7 +314,11 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <h3>5.8 分享</h3>
 
-<p>把当前章节转成<b>令牌路径</b>放进剪贴板。这是令牌路径在整个系统里的唯一用途：它不在 <code>readingOrder</code> 里、不在 canonical 里、不在 Open Graph 里、也不在地址栏里（§8.5）。默认托管模式下令牌 URL 会 404，所以把它指给搜索引擎等于指向一个失败。</p>
+<p>把当前章节转成<b>令牌路径</b>放进剪贴板。令牌路径在产物里只出现两处：剪贴板，以及<b>运行期注入的章节节点的 <code>url</code></b>（§7.3）。除此之外它不在 <code>readingOrder</code> 里、不在 canonical 里、不在 Open Graph 里、也不在地址栏里。</p>
+
+<p>这两处看着像多留了一道口子，其实区分是必要的：<b>canonical 断言「这才是这一章的家」，而 <code>url</code> 里的一条只断言「也可以从这里到达」。</b>前者在默认托管模式下是假的——那个地址返回 404；后者是真的——§8.2 的 404 引导确实能把读者送到这一章。把两句话当成同一句话，才会得出「令牌路径应当被彻底排除」的结论。</p>
+
+<p>同一个 404 也解释了为什么它<b>不</b>进静态的 <code>book.hasPart</code>：那份引用是给不执行 JS 的抓取器准备的（§7.2），而令牌地址恰恰只有执行 JS 才走得到。两件事的受众不重叠，因此可以各取所需而不矛盾。</p>
 
 <p>落地页上没有章节可令牌化，于是复制<b>阅读器自己的地址</b>——「这是这本书」。按钮<b>永不禁用</b>：一个首次使用时什么都不做的控件，读起来就是一个坏掉的控件。片段被保留，因为分享一条脚注引用就应该落到那条脚注上。</p>
 
@@ -389,13 +394,29 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <h3>7.2 书籍节点</h3>
 
-<p><code>@type: ["Book"]</code>，含标识符、标题、作者（含 <code>role</code>）、译者、出版社、语言、描述、日期、以及 <code>hasPart</code>——<b>每一章的 name/url/position 都在这里</b>。这是「不执行 JS 的抓取器也能看到全貌」的全部依据（§7.7）。</p>
+<p><code>@type: ["Book"]</code>，含标识符、标题、作者（含 <code>role</code>）、译者、出版社、语言、描述、日期、以及 <code>hasPart</code>——<b>每一章的 name/url/position 都在这里</b>（<code>url</code> 只在绝对 <code>--base-url</code> 下存在，且只是真实地址，§7.3、§7.5）。这是「不执行 JS 的抓取器也能看到全貌」的全部依据（§7.7）。</p>
 
 <p>不含 <code>numberOfPages</code>，不含 <code>pagination</code>（E.10）。</p>
 
 <h3>7.3 章节节点</h3>
 
 <p><code>@type: ["Chapter", "Article"]</code>，<code>@id</code> 为 <code>{bookId}#ch-{position}</code>，<code>isPartOf</code> 指向书籍节点，并带 <code>articleSection</code>（父级标题）与 <code>position</code>（阅读顺序）。</p>
+
+<p><code>url</code> 是一个<b>数组</b>，列出这一章可以到达的地址：真实路径，以及 §8.2 的令牌路径。两个地址指向同一份内容，这是<b>事实</b>而非冗余——令牌地址在默认托管模式下确实能到达这一章，只是要绕一次 404 引导。</p>
+
+<p>它因此是<b>唯一一个构建期与运行期共同写入的字段</b>，而分工不是随意的：</p>
+
+<table>
+<tr><th>时机</th><th>写入什么</th><th>为什么只能在这里</th></tr>
+<tr><td>构建期</td><td>真实地址，且<b>仅当 <code>--base-url</code> 为绝对形态</b></td><td>路径形态不携带 origin（§7.5）。「站点此刻被服务在哪个源」是 G7 明确要求不猜的东西</td></tr>
+<tr><td>运行期</td><td>读者真正到达的真实地址，加上它的令牌形态</td><td>只有此刻才知道自己是在哪个 origin、哪个子路径下被打开的——预览地址、改名的域名、本地端口都算数</td></tr>
+</table>
+
+<p>运行期的写法是<b>并集而不是覆盖</b>：已有的值原样保留，只追加缺失的，比较时把两边都化到 URL 的规范形态。这两条各自都有一个具体理由。保留是因为构建期写下的值可能正是对的（绝对 <code>--base-url</code> 下就是），覆盖等于用运行期的猜测替换构建期的事实；比较要规范化的理由是同一个地址有两种拼法——构建期写的是 zip 里的条目名，浏览器写的是百分号编码后的形态，<code>a b.xhtml</code> 与 <code>a%20b.xhtml</code> 是同一个文档，按字符串比会把它列两遍，恰好违反「只追加缺失的」。</p>
+
+<p>节点是<b>替换</b>而非累积的：每次导航重建整个 <code>jsonld</code> 槽位（§5.6），落地页上则连章节节点都不存在。滞留下来的旧 <code>url</code> 会宣称「本页也是读者已经离开的那一章」，而这正是 <code>url</code> 存在时要做的断言，只不过做假了。</p>
+
+<p><b>静态 <code>book.hasPart</code> 的引用不带令牌地址</b>，这是决定而非遗漏。它是给不执行 JS 的抓取器看的（§7.2），而令牌地址<b>只有</b>执行 JS 才走得到。于是两类消费者恰好各取所需：执行 JS 的看到两个地址，不执行的看到一个，而那个一定可用。</p>
 
 <h3>7.4 决策：<code>@id</code> 用标识符而非 URL</h3>
 
@@ -409,6 +430,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <tr><td>spine 序号</td><td><code>position</code>、<code>#ch-N</code></td><td>解析层永不反转（E.8）</td></tr>
 <tr><td>spine 序号</td><td>清单 <code>readingOrder</code></td><td><b>只收 <code>linear</code> 项</b>。EPUB 的 <code>linear="no"</code> 标记的是「不在线性阅读序列里」的内容——封面、版权页，以及<b>导航文档自身</b>——而 Publication Manifest 没有表达该标记的词汇。把它放进 <code>readingOrder</code> 等于叫消费者把目录当正文读。那些条目改列 <code>resources</code> 并带 <code>rel="contents"</code>；阅读器侧边栏不受影响，它展示的是书自己的目录，与「什么是阅读顺序」是两个问题（E.11）</td></tr>
 <tr><td>nav 祖先</td><td><code>isPartOf</code></td><td><b>单节点</b>，不输出祖先链：链需要祖先节点具备身份，而 nav 树只给出祖先的 <i>label</i>，要拼出链条就得为书中从未命名的节点编造 <code>@id</code>。链条本想承载的信息已由 <code>articleSection</code> 与 <code>position</code> 给出（E.11）</td></tr>
+<tr><td>spine 条目路径</td><td>章节 <code>url</code></td><td><b>数组</b>，且是唯一由构建期与运行期共同写入的字段（§7.3）。构建期只在<b>绝对</b> <code>--base-url</code> 下写真实地址，并按 URL 规则百分号编码（条目名含空格的书不能写出一个带空格的「URL」）；运行期再把读者实际到达的地址与其令牌形态并入，已有的值原样保留。令牌地址<b>只</b>进这个数组：不进 canonical、不进 <code>book.hasPart</code>（§5.8、§8.5）。<code>--json-ld thin</code> 只裁剪 <code>book.hasPart</code>，运行期注入的章节节点<b>不裁剪</b>；<code>--json-ld none</code> 下根本没有章节节点，因此也就没有 <code>url</code> 可言</td></tr>
 </table>
 
 <h3>7.6 为什么 <code>@type</code> 是数组</h3>
@@ -419,7 +441,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <ul>
 <li><b>只有两层。</b>没有 <code>Part</code>、没有章节内的 <code>Section</code>，图深不超过 2。</li>
-<li><b>不执行 JS 的消费者看不到章节节点</b>——这是刻意的：书籍节点的 <code>hasPart</code> 已经给出了每一章，章节节点是给执行 JS 的消费者的<i>增量</i>，不是唯一入口。</li>
+<li><b>不执行 JS 的消费者看不到章节节点</b>——这是刻意的：书籍节点的 <code>hasPart</code> 已经给出了每一章，章节节点是给执行 JS 的消费者的<i>增量</i>，不是唯一入口。因此<b>令牌地址只对执行 JS 的消费者可见</b>，而那恰好是能用得上令牌地址的一类（§8.5）；反过来也成立——不执行 JS 的抓取器从来看不到一个它取不到的地址，因为那个地址只存在于它看不到的节点里。</li>
 <li><b>标识符不可解析时是派生的</b>：改了文本就改了身份，警告里写明这一点。</li>
 </ul>
 
@@ -466,6 +488,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <tr><td>在壳里用 <code>history.replaceState</code> 把裸页面「改造」成阅读器</td><td>裸页面里没有壳的代码，也没法在不改写书的前提下把它放进去</td></tr>
 <tr><td>把令牌 URL 放进 canonical / sitemap / Open Graph</td><td>默认托管模式下它 404。把搜索引擎指向一个失败，是最糟的一种 SEO</td></tr>
 <tr><td>为每章生成包装页</td><td>那不是零改写，而且会让同一内容有两个 URL</td></tr>
+<tr><td><b>把令牌地址列进运行期章节节点的 <code>url</code>（本版采纳，作为上一条的例外）</b></td><td><b>不与上一条矛盾，但确实放松了一条原则，因此写在这里而不是埋进 §7.3。</b>上一条否决的是把令牌地址当作<b>规范地址</b>：canonical 说的是「这才是这一章的家」，而在默认托管模式下那是个 404。数组里的一条说的是「也可以从这里到达」，这是真的。代价必须记下来：一个不执行 JS 的抓取器如果看到这个 <code>url</code>，会拿到一个它取不到的地址；但这个字段只出现在<b>需要执行 JS 才能看到的</b>章节节点里（§5.6），两个受众恰好错开，而静态的 <code>book.hasPart</code> 不带令牌地址正是为了让这个错开成立。三处输出对同一件事给出三种说法是设计，不是不一致</td></tr>
 </table>
 
 ---
@@ -479,7 +502,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><th>选项</th><th>默认</th><th>说明</th></tr>
 <tr><td><code>-o, --out &lt;dir&gt;</code></td><td><code>./dist</code></td><td>相对<b>调用者</b>的 cwd，绝不相对包自身</td></tr>
 <tr><td><code>--name &lt;file&gt;</code></td><td><code>epubsite.html</code></td><td>不得为 <code>index.html</code></td></tr>
-<tr><td><code>--base-url &lt;url&gt;</code></td><td><code>/</code></td><td>路径形态（<code>/sub/</code>）或绝对形态（<code>https://host/sub/</code>）。<b>只有绝对形态</b>才能产出 canonical、JSON-LD <code>url</code> 与 <code>og:image</code>——路径形态知道站点住哪，但不携带 origin</td></tr>
+<tr><td><code>--base-url &lt;url&gt;</code></td><td><code>/</code></td><td>路径形态（<code>/sub/</code>）或绝对形态（<code>https://host/sub/</code>）。<b>只有绝对形态</b>才能产出 canonical、<b>静态</b> JSON-LD <code>url</code> 与 <code>og:image</code>——路径形态知道站点住哪，但不携带 origin。运行期注入的章节节点不受此限：它自己知道被打在哪个源下，因此总会写入 <code>url</code>（§7.3）</td></tr>
 <tr><td><code>--hosting &lt;mode&gt;</code></td><td><code>404</code></td><td><code>none</code> / <code>404</code> / <code>rewrite</code> / <code>all</code>。后两者未实现</td></tr>
 <tr><td><code>--json-ld &lt;mode&gt;</code></td><td><code>full</code></td><td><code>full</code> / <code>thin</code> / <code>none</code>；<code>--no-json-ld</code> 是后者的简写。<b>不影响</b> <code>publication.json</code>（A.1）</td></tr>
 <tr><td><code>--search</code></td><td>关</td><td>构建 Pagefind 索引（附录 D）</td></tr>
@@ -887,9 +910,10 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><td>F.6</td><td><b>G8 从「可选」改为目标</b>；<code>--search</code> 与 <code>icon.svg</code> 进入产物结构（§3.1、§3.2、§9）</td><td>搜索已实现，而图标是壳的固有组成部分——它在 <code>--no-spa</code> 下也存在（那是唯一与样式表一起发布的资产）。两者此前不在规范里</td></tr>
 <tr><td>F.7</td><td><b>新增 §13.4 测试方法论</b></td><td>三条纪律各由一次实际浪费换来：把未复现的失败断言改成 <code>fixme</code>（等于删掉它）、写了在布局全坏时也会通过的断言（因为 <code>overflow: hidden</code> 的 body 仍可被程序化滚动）、用 <code>toBeVisible()</code> 断言一个被覆盖的按钮「可用」。这些不是风格偏好，是错误答案的具体形状</td></tr>
 <tr><td>F.8</td><td>术语表补入「面板」「不可断令牌」「降级」；§1.2 补入「不为内容重新排版」及其唯一例外</td><td>I6 要求断行，而断行是壳对书内容的唯一一处呈现干预。不写明例外，§1.2 的承诺就会与 §5.10 的实施相矛盾</td></tr>
+<tr><td>F.9</td><td><b>章节 <code>url</code> 改为数组，运行期并入真实地址与令牌地址</b>（§5.8、§7.3、§7.5、§8.5、§9）</td><td>v1.2 与 v1.3 都写了「令牌路径在整个系统里的唯一用途是剪贴板」。这条断言被一个具体需求推翻：只给真实地址时，抓取器要么索引裸页面（可读，但没有阅读器），要么根本看不到章节节点。列两个地址等于说「这一章在这两个地址都能到达」，这是真的。它要求把两句话分开——canonical（仍否决）与 <code>url</code> 列表项（采纳）——并要求运行期承担这个字段，因为「站点此刻被打在哪个源下」构建期无从得知（G7）。顺带修掉一处构造缺陷：构建期写 <code>url</code> 时直接用 zip 里的条目名，含空格的书会写出一个带空格的「URL」，而运行期写的是浏览器形态；同一个地址两种拼法使「已有则跳过」失效，地址被列两遍。改法是构建期按 URL 规则编码，运行期按规范形态比较。<b>这也是首次出现「必须原地改写既有章节」的情况，理由记在文首</b></td></tr>
 </table>
 
-<h3>F.9 未决项</h3>
+<h3>F.10 未决项</h3>
 
 <table>
 <tr><th>项</th><th>状态</th></tr>

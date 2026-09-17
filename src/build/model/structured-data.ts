@@ -29,6 +29,7 @@
  *   - `@id` is identity, never location (§7.4), so it survives moving the site.
  */
 import { chapterId, normalizeBookId, normalizeIsbn } from '../ids'
+import { toUrlPath, type EntryPath } from '../../shared/paths'
 import type { BookModel } from './book'
 import type { BaseUrl, JsonLdMode } from '../options'
 import type { Diagnostics } from '../diagnostics'
@@ -244,7 +245,7 @@ interface ChapterInput {
   model: BookModel
   bookId: string
   base: string | undefined
-  entryPath: string
+  entryPath: EntryPath
   position: number
   label: string
   section: string | undefined
@@ -265,7 +266,11 @@ function chapterNode(input: ChapterInput): ChapterNode {
     isPartOf: { '@type': 'Book', '@id': input.bookId },
   }
 
-  if (input.base !== undefined) node.url = `${input.base}${input.entryPath}`
+  // Percent-encoded, because `entryPath` is the name as it appears inside the zip
+  // and a URL is not a file name. Books do contain spaces and non-ASCII names, and
+  // a literal space in `url` is not a URL at all — while a runtime that emitted
+  // the encoded spelling would then be listing a second, "different" address.
+  if (input.base !== undefined) node.url = `${input.base}${toUrlPath(input.entryPath)}`
   // Omitted at the top level, which is why it is optional rather than empty:
   // `articleSection: ""` is a claim, an absent field is an absence.
   if (input.section !== undefined && input.section !== '') node.articleSection = input.section

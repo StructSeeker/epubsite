@@ -78,6 +78,14 @@ const siteDir = join(workDir, 'site')
 let server: RunningServer
 let baseURL: string
 
+// Servers started by individual tests. They are closed in `afterAll`, not by the
+// test that opened them: `server.close()` resolves only once every connection has
+// ended, and a browser holds a keep-alive socket open between requests. Closing
+// while the test's own page is still open waits for that page to go away, which
+// happens after the test — measured as a test that spent 29 of its 30 seconds
+// shutting down a server it had finished using.
+const extraServers: RunningServer[] = []
+
 test.beforeAll(async () => {
   await rm(workDir, { recursive: true, force: true })
   await mkdir(siteDir, { recursive: true })
@@ -91,6 +99,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await server?.close()
+  await Promise.all(extraServers.splice(0).map((extra) => extra.close()))
 })
 
 function buildFixture(): Buffer {
@@ -266,6 +275,95 @@ test('the chapter JSON-LD is injected, and the book’s block is left alone (§5
   expect(state.types).toEqual(['Book', ['Chapter', 'Article']])
   expect(state.marked).toBe(1)
   expect(state.partOf).toBe('urn:isbn:9780000000000')
+})
+
+test('the chapter node names every address the chapter is reachable at (§7.3, §8.5)', async ({
+  page,
+}) => {
+  // The default relative base URL is what this fixture is built with, and that is
+  // the interesting case: the build emits no `url` at all, so both entries come
+  // from the runtime — and they come from *where the site is actually served*,
+  // which is a port the build could not have known.
+  await ready(page)
+
+  const chapterUrl = async (): Promise<unknown> =>
+    page.evaluate(
+      () => JSON.parse(document.querySelector('[data-epub-ld]')?.textContent ?? '{}')['url'],
+    )
+
+  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epub-content h1')).toHaveText('One')
+
+  expect(await chapterUrl()).toEqual([
+    `${baseURL}/OEBPS/text/ch01.xhtml`,
+    `${baseURL}/OEBPS/text/@ch01.xhtml`,
+  ])
+
+  // §5.4.1 step 3 replaced the token address with the real one before anything was
+  // fetched, so the reader's own address is the plain file. The token entry is
+  // derived from it rather than read back off `location`, which is why it is still
+  // there and still correct.
+  expect(new URL(page.url()).pathname).toBe('/OEBPS/text/ch01.xhtml')
+
+  // Replaced, not accumulated. A node that kept the previous chapter's addresses
+  // would tell a crawler that this page is also a copy of the chapter the reader
+  // has already left — the exact claim `url` exists to make, made falsely.
+  await page.click('#toc a[data-key="OEBPS/text/deep/ch03.xhtml"]')
+  await expect(page.locator('#epub-content h1')).toHaveText('Two')
+
+  expect(await chapterUrl()).toEqual([
+    `${baseURL}/OEBPS/text/deep/ch03.xhtml`,
+    `${baseURL}/OEBPS/text/deep/@ch03.xhtml`,
+  ])
+
+  // And the landing page has no chapter node at all, so no stale `url` survives
+  // the reader going back to it.
+  await page.goto(`${baseURL}/epubsite.html`)
+  await expect(page.locator('#toc')).toBeVisible()
+  expect(await page.locator('[data-epub-ld]').count()).toBe(0)
+})
+
+test('an absolute --base-url does not make the reader list the real address twice (§7.3)', async ({
+  page,
+}) => {
+  // The one case the shared fixture cannot reach: when `--base-url` is absolute,
+  // the *build* has already written the chapter's real address into `url`, and the
+  // runtime then computes the very same address from `location.href`. If the two
+  // spellings differed at all, the "append only what is missing" rule would fail
+  // and the chapter would be listed twice — asserting it lives in two places.
+  //
+  // The site must be served on the origin the build was told about, so it gets its
+  // own directory and its own server rather than the suite's shared one. That
+  // server is registered for `afterAll` rather than closed here — see the note on
+  // `extraServers`.
+  const dir = join(workDir, 'base-url-site')
+  await rm(dir, { recursive: true, force: true })
+  await mkdir(dir, { recursive: true })
+
+  const own = await startServer({ root: dir })
+  extraServers.push(own)
+
+  const origin = own.url
+  const epubPath = await writeEpub(workDir, buildFixture(), 'based.epub')
+  await build(epubPath, {
+    out: dir,
+    force: true,
+    baseUrl: { form: 'absolute', href: `${origin}/` },
+  })
+
+  await page.goto(`${origin}/epubsite.html`)
+  await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
+  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epub-content h1')).toHaveText('One')
+
+  // Read through a locator rather than `page.evaluate`, so that a stall names the
+  // step: `evaluate` has no timeout of its own and reports only "test timeout".
+  const raw = await page.locator('[data-epub-ld]').textContent()
+  const url = (JSON.parse(raw ?? '{}') as Record<string, unknown>)['url']
+
+  // Exactly two, not three: the real address appears once, and it is the build's
+  // spelling that survived — the runtime recognised it and did not append its own.
+  expect(url).toEqual([`${origin}/OEBPS/text/ch01.xhtml`, `${origin}/OEBPS/text/@ch01.xhtml`])
 })
 
 test('a missing resource is not hijacked into a chapter load (§8.3 constraint 3)', async ({
