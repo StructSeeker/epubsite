@@ -16,75 +16,6 @@ No server, no database, no CDN, no runtime dependencies. Just files.
 
 ---
 
-## Why "zero-rewrite" is the whole point
-
-Most EPUB-to-web converters rewrite the book: they flatten paths, strip the
-package document, rewrite every `href`, and hand you back HTML that *resembles*
-the book. That is lossy, and it silently breaks anything the converter did not
-anticipate — embedded fonts, `xml:lang`, custom CSS, SVG, MathML.
-
-`epubsite` does the opposite. The EPUB is a ZIP; the site is that same directory
-tree, extracted. `EPUB/s04.xhtml` becomes `/EPUB/s04.xhtml`. `META-INF/container.xml`,
-`mimetype`, the OPF, the NCX — all of it ships, unchanged.
-
-Two consequences follow, and they are the reason this tool exists:
-
-- **Every chapter opens on its own.** `https://example.com/EPUB/ch03.xhtml` is a
-  real, working URL. It renders as a bare, readable page with no JavaScript, no
-  shell, no build artifacts — because that is literally the file from the EPUB.
-  Crawlers, `curl`, and JavaScript-disabled browsers all get the book.
-- **Nothing can be broken by the conversion,** because there is no conversion.
-
-The reading experience is added *beside* the book, never *over* it:
-
-```
-dist/
-├── EPUB/                  ← the book, byte-for-byte
-│   ├── package.opf
-│   ├── nav.xhtml
-│   ├── css/
-│   ├── images/
-│   └── s04.xhtml          ← also a standalone, working page
-├── META-INF/
-├── mimetype
-│
-├── epubsite.html          ┐
-├── index.html             │  the reserved namespace:
-├── 404.html               │  the reader, its assets and its metadata
-├── publication.json       │
-├── .epubsite-root         │
-└── _epubsite_assets/      ┘
-    ├── shell.js
-    ├── shell.css
-    ├── shell-data.json
-    ├── htmx.esm.js
-    └── pagefind/          ← only with --search
-```
-
-`epubsite` refuses to build (exit 4) if the book already contains a file in that
-namespace, rather than silently overwriting part of your book.
-
----
-
-## Features
-
-| | |
-|---|---|
-| **Zero-rewrite publishing** | The book is extracted verbatim. Paths, bytes, metadata, fonts and CSS all survive. |
-| **Every chapter is a real page** | Deep-linkable, crawlable, works without JavaScript. |
-| **Single-page reading experience** | Once you enter the reader, chapter changes swap content in place via htmx — the sidebar never reloads, scroll and focus behave. Degrades to plain multi-page when JS is unavailable. |
-| **Sidebar from the book's own navigation** | Uses the EPUB 3 `nav` document, falling back to the NCX. Honours `page-progression-direction` for RTL books. |
-| **Per-chapter styles, restored** | Each chapter's own stylesheet links, `@import`s, inline `<style>`, `body` class, `lang` and `dir` are reapplied as you navigate — the book looks the way its publisher intended, chapter by chapter. |
-| **Shareable deep links** | A link to `/EPUB/text/@ch01.xhtml` enters the reader at the right chapter, then rewrites the address bar to the honest path. Copy the link button gives a URL that always works. |
-| **Full-text search** | `--search` builds a Pagefind index over the spine. Results are highlighted and clicking one stays *inside* the reader. |
-| **Structured data** | Schema.org `Book` / `Chapter` JSON-LD, plus a `publication.json` Web Publication Manifest. |
-| **Theming** | `auto` / `light` / `dark`, implemented with `light-dark()` and `color-scheme` so it follows the OS and can be overridden. |
-| **Fixed-layout books handled honestly** | Pre-paginated EPUBs cannot be reflowed by a shell, so the build degrades to the plain multi-page site and says so on the landing page instead of pretending. |
-| **Reference auditing** | The build reports external resources and links that escape the site root, so you know what will break offline. |
-| **Strict by design** | Unknown flags are errors. Every failure has a stable exit code and a machine-readable `--json` form. |
-| **No lock-in** | The output is plain files. Delete `epubsite.html` and the book is still there, intact. |
-
----
 
 ## Install
 
@@ -215,6 +146,77 @@ epubsite moby-dick.epub --dry-run --json | jq '.stats'
 
 **Stream discipline:** the build result goes to **stdout**; warnings, errors and
 progress go to **stderr**. `epubsite book.epub > result.json` is safe.
+
+---
+
+
+## Why "zero-rewrite" is the whole point
+
+Most EPUB-to-web converters rewrite the book: they flatten paths, strip the
+package document, rewrite every `href`, and hand you back HTML that *resembles*
+the book. That is lossy, and it silently breaks anything the converter did not
+anticipate — embedded fonts, `xml:lang`, custom CSS, SVG, MathML.
+
+`epubsite` does the opposite. The EPUB is a ZIP; the site is that same directory
+tree, extracted. `EPUB/s04.xhtml` becomes `/EPUB/s04.xhtml`. `META-INF/container.xml`,
+`mimetype`, the OPF, the NCX — all of it ships, unchanged.
+
+Two consequences follow, and they are the reason this tool exists:
+
+- **Every chapter opens on its own.** `https://example.com/EPUB/ch03.xhtml` is a
+  real, working URL. It renders as a bare, readable page with no JavaScript, no
+  shell, no build artifacts — because that is literally the file from the EPUB.
+  Crawlers, `curl`, and JavaScript-disabled browsers all get the book.
+- **Nothing can be broken by the conversion,** because there is no conversion.
+
+The reading experience is added *beside* the book, never *over* it:
+
+```
+dist/
+├── EPUB/                  ← the book, byte-for-byte
+│   ├── package.opf
+│   ├── nav.xhtml
+│   ├── css/
+│   ├── images/
+│   └── s04.xhtml          ← also a standalone, working page
+├── META-INF/
+├── mimetype
+│
+├── epubsite.html          ┐
+├── index.html             │  the reserved namespace:
+├── 404.html               │  the reader, its assets and its metadata
+├── publication.json       │
+├── .epubsite-root         │
+└── _epubsite_assets/      ┘
+    ├── shell.js
+    ├── shell.css
+    ├── shell-data.json
+    ├── htmx.esm.js
+    └── pagefind/          ← only with --search
+```
+
+`epubsite` refuses to build (exit 4) if the book already contains a file in that
+namespace, rather than silently overwriting part of your book.
+
+---
+
+## Features
+
+| | |
+|---|---|
+| **Zero-rewrite publishing** | The book is extracted verbatim. Paths, bytes, metadata, fonts and CSS all survive. |
+| **Every chapter is a real page** | Deep-linkable, crawlable, works without JavaScript. |
+| **Single-page reading experience** | Once you enter the reader, chapter changes swap content in place via htmx — the sidebar never reloads, scroll and focus behave. Degrades to plain multi-page when JS is unavailable. |
+| **Sidebar from the book's own navigation** | Uses the EPUB 3 `nav` document, falling back to the NCX. Honours `page-progression-direction` for RTL books. |
+| **Per-chapter styles, restored** | Each chapter's own stylesheet links, `@import`s, inline `<style>`, `body` class, `lang` and `dir` are reapplied as you navigate — the book looks the way its publisher intended, chapter by chapter. |
+| **Shareable deep links** | A link to `/EPUB/text/@ch01.xhtml` enters the reader at the right chapter, then rewrites the address bar to the honest path. Copy the link button gives a URL that always works. |
+| **Full-text search** | `--search` builds a Pagefind index over the spine. Results are highlighted and clicking one stays *inside* the reader. |
+| **Structured data** | Schema.org `Book` / `Chapter` JSON-LD, plus a `publication.json` Web Publication Manifest. |
+| **Theming** | `auto` / `light` / `dark`, implemented with `light-dark()` and `color-scheme` so it follows the OS and can be overridden. |
+| **Fixed-layout books handled honestly** | Pre-paginated EPUBs cannot be reflowed by a shell, so the build degrades to the plain multi-page site and says so on the landing page instead of pretending. |
+| **Reference auditing** | The build reports external resources and links that escape the site root, so you know what will break offline. |
+| **Strict by design** | Unknown flags are errors. Every failure has a stable exit code and a machine-readable `--json` form. |
+| **No lock-in** | The output is plain files. Delete `epubsite.html` and the book is still there, intact. |
 
 ---
 
