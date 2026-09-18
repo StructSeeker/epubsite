@@ -194,6 +194,40 @@ describe('build — a site that is the book', () => {
     expect(shell).toContain('<script type="module" src="_epubsite_assets/shell.js"></script>')
   })
 
+  it('credits the project at the foot of the landing page (§5.1)', async () => {
+    const { site } = await buildSite()
+    const shell = (await readTree(site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
+
+    // Where it is matters as much as what it says: inside `#epub-content`, which a
+    // chapter replaces wholesale. That is the whole mechanism by which the credit
+    // is the landing page's and not the reader's. Asserted as a position rather
+    // than assumed, because a future edit that moves it out of the pane would
+    // silently make it permanent.
+    const footer = shell.indexOf('<footer class="credit">')
+    expect(footer).toBeGreaterThan(shell.indexOf('<main id="epub-content"'))
+    expect(footer).toBeLessThan(shell.indexOf('</main>'))
+
+    // The attribute set is conditional (`hx-boost` only in the SPA), so the tag is
+    // matched and then interrogated rather than compared as one string.
+    const link = /<a href="https:\/\/github\.com\/StructSeeker\/epubsite"[^>]*>epubsite<\/a>/.exec(shell)?.[0] ?? ''
+    expect(link).toContain('hx-boost="false"')
+    expect(link).toContain('target="_blank"')
+    // `target="_blank"` without `noopener` hands the new page a handle on ours.
+    expect(link).toContain('rel="noopener noreferrer"')
+
+    // `--no-spa` emits no htmx anywhere, and the link is still a link — which is
+    // the point of it being an anchor that htmx is told to leave alone, not a
+    // control the runtime wires up.
+    const plain = await buildSite(sampleEpub(), { spa: false })
+    const noSpa =
+      (await readTree(plain.site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
+    expect(noSpa).toContain('<footer class="credit">')
+    const plainLink =
+      /<a href="https:\/\/github\.com\/StructSeeker\/epubsite"[^>]*>epubsite<\/a>/.exec(noSpa)?.[0] ?? ''
+    expect(plainLink).toContain('target="_blank"')
+    expect(plainLink).not.toContain('hx-boost')
+  })
+
   it('ships the runtime, htmx and the shell data only when the SPA layer is on', async () => {
     const withSpa = await readTree((await buildSite()).site.out)
     expect(withSpa.has('_epubsite_assets/shell.js')).toBe(true)

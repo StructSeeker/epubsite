@@ -240,7 +240,10 @@ namespace, rather than silently overwriting part of your book.
 description, the landing page's canonical (when `--base-url` names an origin),
 `Book` JSON-LD — so a crawler or a reader with JavaScript disabled gets a
 complete, useful document with a table of contents and a landing page describing
-the book.
+the book. That page ends with a line crediting the project and
+[linking to this repository](https://github.com/StructSeeker/epubsite); it is part
+of the landing markup, so it is gone as soon as a chapter opens and comes back
+with the home control. Deep links enter on a chapter and never show it.
 
 When the runtime loads, it:
 

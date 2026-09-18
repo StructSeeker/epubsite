@@ -223,6 +223,44 @@ test('the home control returns to the landing page in place (§5.7)', async ({ p
   expect(failures).toEqual([])
 })
 
+test('the landing page credits the project, and a chapter does not (§5.1)', async ({ page }) => {
+  const failures = watchForFailures(page)
+
+  // The click opens a popup, i.e. a new *page*, so the stub has to be registered
+  // on the context — `page.route` would never see the popup's request. Fulfilling
+  // it here also keeps the suite off the real github.com.
+  await page.context().route('https://github.com/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>epubsite</h1>' }),
+  )
+
+  await ready(page)
+  const credit = page.locator('#epub-content .credit')
+  await expect(credit).toBeVisible()
+  expect((await credit.innerText()).trim()).toBe('Built with epubsite')
+
+  // A working, un-intercepted link. §5.7 is why this is worth a request rather
+  // than an attribute check: a boosted cross-origin link is refused by
+  // `selfRequestsOnly` and then does *nothing at all* when clicked, which looks
+  // exactly like a link that works.
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup'),
+    credit.locator('a').click(),
+  ])
+  await popup.waitForLoadState()
+  expect(popup.url()).toBe('https://github.com/StructSeeker/epubsite')
+
+  // The credit belongs to the landing markup, so a chapter takes it away…
+  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await expect(credit).toHaveCount(0)
+
+  // …and the home control brings the landing page back, credit and all.
+  await page.click('#home')
+  await expect(page.locator('#epub-content h1')).toHaveText('Sample Book')
+  await expect(credit).toBeVisible()
+  expect(failures).toEqual([])
+})
+
 test('a chapter’s relative images resolve after the base moved', async ({ page }) => {
   const failures = watchForFailures(page)
   // A deeply nested chapter is the case that discriminates: a sibling-relative

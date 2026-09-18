@@ -469,5 +469,43 @@ ${input.notices.map((notice) => html`<p class="notice">${notice}</p>`)}
 ${authors === '' ? markSafe('') : html`<p class="byline">${authors}</p>`}
 ${publisher === undefined ? markSafe('') : html`<p class="publisher">${publisher}</p>`}
 ${description === undefined ? markSafe('') : html`<p class="description">${description}</p>`}
-<p>Choose a chapter from the table of contents. Each chapter also opens on its own.</p>`
+<p>Choose a chapter from the table of contents. Each chapter also opens on its own.</p>
+${creditLine(input.spa)}`
+}
+
+/**
+ * This project's own address.
+ *
+ * A constant rather than a read of `package.json`'s `repository` field, so that
+ * nothing under `render/` needs the file system: the build's only reason to open
+ * the manifest is asset discovery (`assets/paths.ts`), and `readPackageVersion()`
+ * is deliberately a CLI concern — it exists so `--version` cannot go stale.
+ * Keeping the two apart is what stops every release from rewriting the artifact.
+ */
+const PROJECT_URL = 'https://github.com/StructSeeker/epubsite'
+
+/**
+ * The acknowledgement at the foot of the landing page.
+ *
+ * It belongs to the landing page and nowhere else, which is a consequence of
+ * where it is rendered rather than a condition on it: the line sits inside
+ * `#epub-content`, and opening a chapter replaces that pane with the book's own
+ * markup — so the credit leaves with the landing page and comes back with it,
+ * including through the home control, because the home control swaps exactly this
+ * fragment back in. A deep link (token path or `?p=`) enters on a chapter and
+ * never shows it at all.
+ *
+ * `target="_blank"` with `rel="noopener noreferrer"` because following a credit
+ * should not cost the reader their place in the book. External links get
+ * `hx-boost="false"` (§5.7) — never inferred, even here, where the click was
+ * never actually at risk: htmx boosts an anchor only when it is a *local* link
+ * **and** its target is `_self`, and this one is neither. Without the attribute
+ * the link would still work; with it, the reason it works is written down.
+ *
+ * Emitted only in the SPA because `--no-spa` means no htmx at all, and a shell
+ * that contains no `hx-boost` anywhere is the honest form of that.
+ */
+function creditLine(spa: boolean): SafeHtml {
+  const boost = spa ? markSafe(' hx-boost="false"') : markSafe('')
+  return html`<footer class="credit">Built with <a href="${PROJECT_URL}"${boost} target="_blank" rel="noopener noreferrer">epubsite</a></footer>`
 }

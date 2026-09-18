@@ -475,6 +475,34 @@
   }
 
   /*
+   * The acknowledgement at the foot of the landing page.
+   *
+   * Quiet by construction: it is the last thing on the page and the least
+   * important thing on it, so it is separated by a rule and a gap rather than by
+   * weight, and it takes its colour from the muted token rather than introducing
+   * an accent the palette does not have. The link is underlined because it is the
+   * only affordance available here — there is no accent colour to mark it with —
+   * and inherit, rather than `--shell-fg`, so it still reads as one line.
+   *
+   * `margin-block-start: auto` is deliberately absent: this sits in `#epub-content`,
+   * a scrolling pane, and pushing it to the pane's bottom would move it away from
+   * the text it belongs to the moment the description is long.
+   */
+  .credit {
+    margin-block-start: 2rem;
+    padding-block-start: 0.75rem;
+    border-block-start: 1px solid var(--shell-border);
+    color: var(--shell-muted);
+    font-size: 0.85rem;
+  }
+
+  .credit a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /*
    * The drawer's toggle is desktop chrome the reader does not have: above the
    * breakpoint the sidebar is permanent, so there is nothing to open. The symbol
    * group above is two ids wide, so this rule — and the one that shows it again
