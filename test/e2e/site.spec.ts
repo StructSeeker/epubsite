@@ -171,6 +171,58 @@ test('a chapter opens from the sidebar without reloading the document', async ({
   expect(failures).toEqual([])
 })
 
+test('the home control returns to the landing page in place (§5.7)', async ({ page }) => {
+  const failures = watchForFailures(page)
+  await ready(page)
+
+  // Two identities, because two separate claims are being made. The window flag
+  // is what "no reload" means: a full navigation to /epubsite.html lands on the
+  // same URL and shows the same heading, so only a value that survives in the
+  // document can tell the two apart. The sidebar's node is the second: it must
+  // still be the same element afterwards, which is only true if the response was
+  // reduced to `#epub-content`'s children. Swapping in the whole shell body — what
+  // a boosted request without `hx-select` does — would nest a second `#frame` and
+  // a second `#toc` inside the pane, and `#toc` would be a different element.
+  await page.evaluate(() => {
+    const w = window as unknown as { __alive?: boolean; __toc: Element | null }
+    w.__alive = true
+    w.__toc = document.getElementById('toc')
+  })
+
+  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await expect(page).toHaveTitle('One')
+  expect(new URL(page.url()).pathname).toBe('/OEBPS/text/ch01.xhtml')
+
+  await page.click('#home')
+  await expect(page.locator('#epub-content h1')).toHaveText('Sample Book')
+
+  const state = await page.evaluate(() => {
+    const w = window as unknown as { __alive?: boolean; __toc: Element | null }
+    return {
+      path: location.pathname,
+      alive: w.__alive,
+      sidebarSame: w.__toc === document.getElementById('toc'),
+      chapterNode: document.querySelectorAll('[data-epub-ld]').length,
+      current: document.querySelector('#toc [aria-current]')?.textContent ?? null,
+    }
+  })
+
+  expect(state.path).toBe('/epubsite.html')
+  expect(state.alive).toBe(true)
+  expect(state.sidebarSame).toBe(true)
+  // The document title is the response's own `<title>`, put back by htmx — the
+  // landing page carries no runtime code for it, and `syncChapter` never restored
+  // the title on its landing branch, because until now only htmx's history cache
+  // could bring the reader back here.
+  await expect(page).toHaveTitle('Sample Book')
+  // The chapter's JSON-LD node went with the chapter, and no sidebar entry is
+  // current any more: both are the landing branch of the same sync.
+  expect(state.chapterNode).toBe(0)
+  expect(state.current).toBeNull()
+  expect(failures).toEqual([])
+})
+
 test('a chapter’s relative images resolve after the base moved', async ({ page }) => {
   const failures = watchForFailures(page)
   // A deeply nested chapter is the case that discriminates: a sibling-relative
@@ -364,6 +416,64 @@ test('an absolute --base-url does not make the reader list the real address twic
   // Exactly two, not three: the real address appears once, and it is the build's
   // spelling that survived — the runtime recognised it and did not append its own.
   expect(url).toEqual([`${origin}/OEBPS/text/ch01.xhtml`, `${origin}/OEBPS/text/@ch01.xhtml`])
+})
+
+test('the landing page’s canonical is withdrawn on a chapter and put back afterwards (§5.4, §7.5)', async ({
+  page,
+}) => {
+  // The tag only exists when the build was told the origin, so this needs its own
+  // site on its own server — the same reason the test above does. That server goes
+  // into `extraServers` rather than being closed here: `close()` waits for every
+  // connection, and this page holds one open.
+  const dir = join(workDir, 'canonical-site')
+  await rm(dir, { recursive: true, force: true })
+  await mkdir(dir, { recursive: true })
+
+  const own = await startServer({ root: dir })
+  extraServers.push(own)
+
+  const origin = own.url
+  const epubPath = await writeEpub(workDir, buildFixture(), 'canonical.epub')
+  await build(epubPath, {
+    out: dir,
+    force: true,
+    baseUrl: { form: 'absolute', href: `${origin}/` },
+  })
+
+  const canonical = page.locator('link[rel="canonical"]')
+
+  await page.goto(`${origin}/epubsite.html`)
+  await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
+  await expect(canonical).toHaveCount(1)
+  expect(await canonical.getAttribute('href')).toBe(`${origin}/epubsite.html`)
+
+  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epub-content h1')).toHaveText('One')
+
+  // The document is a chapter now, so the landing page's claim is false and must
+  // be gone. It is not *replaced* by the chapter's own address: under this design
+  // a chapter gets no canonical at all, in either of the two addresses it is
+  // reachable at (§8.5).
+  await expect(canonical).toHaveCount(0)
+
+  // Back is the cheap return path: htmx restores the cached body and fires
+  // `historyRestore`. It is also the path a removal-only implementation fails —
+  // nothing else re-asserts the head's state, so the tag would stay gone.
+  await page.goBack()
+  await expect(page.locator('#epub-content h1')).toHaveText('Sample Book')
+  await expect(canonical).toHaveCount(1)
+  expect(await canonical.getAttribute('href')).toBe(`${origin}/epubsite.html`)
+
+  // And the home control is the other one: a fresh request whose response is cut
+  // down to `#epub-content`'s children. Same head state, different route to it.
+  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await expect(canonical).toHaveCount(0)
+
+  await page.click('#home')
+  await expect(page.locator('#epub-content h1')).toHaveText('Sample Book')
+  await expect(canonical).toHaveCount(1)
+  expect(await canonical.getAttribute('href')).toBe(`${origin}/epubsite.html`)
 })
 
 test('a missing resource is not hijacked into a chapter load (§8.3 constraint 3)', async ({

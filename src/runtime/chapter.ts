@@ -1,12 +1,12 @@
 /**
  * Per-chapter synchronisation (spec §5.4.2, §5.7).
  *
- * Four pieces of state change together whenever the reader moves to another
- * chapter — styles, body attributes, the sidebar highlight, and the document
- * title — and they are keyed by the same thing, so they are done in one call.
- * Splitting them into separate listeners is how they drift: one fires on
- * `afterSwap`, another on `afterSettle`, and the page spends a frame or two in a
- * state nobody designed.
+ * Five pieces of state change together whenever the reader moves to another
+ * chapter — styles, the landing page's canonical link, body attributes, the
+ * sidebar highlight, and the document title — and they are keyed by the same
+ * thing, so they are done in one call. Splitting them into separate listeners is
+ * how they drift: one fires on `afterSwap`, another on `afterSettle`, and the
+ * page spends a frame or two in a state nobody designed.
  *
  * `syncBodyAttrs` exists because of a detail that is easy to miss: htmx swaps the
  * chapter's **body content**, not its `<body>` element, so `class`, `dir` and
@@ -14,7 +14,7 @@
  * its body would lose it on the second chapter and keep it on the first — the
  * kind of bug that looks like a stylesheet problem for a long time.
  */
-import { clearStyles, syncJsonLd, syncStyles } from './head-slots'
+import { clearStyles, syncCanonical, syncJsonLd, syncStyles } from './head-slots'
 import { withChapterUrls } from './chapter-urls'
 import { revealCurrent } from './toc'
 import type { ChapterData, ShellData } from './data'
@@ -37,15 +37,21 @@ export function syncChapter(context: ChapterSyncContext, key: string | null): vo
   if (chapter === undefined) {
     // The shell itself, or a path the book does not own: the landing page. The
     // book's styles must go, or the landing page would render in whichever
-    // chapter's fonts were last applied.
+    // chapter's fonts were last applied — and the canonical comes back, because
+    // this document is the landing page again (§5.4).
     clearStyles()
     syncJsonLd(undefined)
+    syncCanonical(true)
     document.body.className = ''
     document.body.dir = context.shellDir
     document.documentElement.lang = context.shellLang
     return
   }
 
+  // The document is a chapter now, so the landing page's canonical is a claim
+  // about the wrong document. Nothing replaces it: a chapter is deliberately
+  // given no canonical at all, in either of its addresses (§7.5, §8.5).
+  syncCanonical(false)
   syncStyles(chapter, context.root)
   // The chapter node is decorated with the addresses the reader actually arrived
   // at (§7.3). It happens here rather than in `syncJsonLd`, which stays a DOM-slot

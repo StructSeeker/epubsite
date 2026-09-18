@@ -48,9 +48,10 @@ Options
       --name <file>    Shell file name (default epubsite.html; not index.html)
       --base-url <url> Where the site will be deployed:
                          "/" or "/sub/"        path form
-                         "https://host/sub/"   absolute form, additionally
-                                               enabling canonical, JSON-LD url
-                                               and og:image
+                         "https://host/sub/"   absolute form, which also lets
+                                               the build write the static
+                                               JSON-LD url and the landing
+                                               page's canonical link
       --hosting <mode> none | 404 | rewrite | all        (default 404)
       --json-ld <mode> full | thin | none                (default full)
       --no-json-ld     Same as --json-ld none

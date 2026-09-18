@@ -900,16 +900,61 @@ describe('build — presentation that must not leak into reading order', () => {
     expect(shell.indexOf('OEBPS/nav.xhtml')).toBeLessThan(shell.indexOf('OEBPS/text/ch01.xhtml'))
   })
 
-  it('emits canonical only for an absolute --base-url (§9, §7.5)', async () => {
-    const absolute = await buildSite(sampleEpub(), { baseUrl: { form: 'absolute', href: 'https://example.com/books/' } })
+  it('emits canonical for the landing page only, and marks it for the runtime (§9, §7.5)', async () => {
+    const absolute = await buildSite(sampleEpub(), {
+      baseUrl: { form: 'absolute', href: 'https://example.com/books/' },
+    })
     const withCanonical =
       (await readTree(absolute.site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
-    expect(withCanonical).toContain('<link rel="canonical" href="https://example.com/books/epubsite.html">')
+
+    // Asserted as the invariant rather than as one exact string: what the runtime
+    // keys on is the attribute set, not the tag's text. §5.4 — the tag belongs to
+    // the landing page, so the reader has to be able to find it and withdraw it
+    // once a chapter is on screen.
+    const canonical = /<link rel="canonical"[^>]*>/.exec(withCanonical)?.[0] ?? ''
+    expect(canonical).toContain('data-epub-canonical')
+    expect(canonical).toContain('href="https://example.com/books/epubsite.html"')
 
     const pathForm = await buildSite(sampleEpub())
     const without =
       (await readTree(pathForm.site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
     expect(without).not.toContain('rel="canonical"')
+  })
+
+  it('renders the toolbar controls as symbols with accessible names (§5.1, §11.1)', async () => {
+    const { site } = await buildSite(sampleEpub(), { search: true })
+    const shell = (await readTree(site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
+
+    // The drawer toggle lost its text, so `aria-label` is now the only thing that
+    // can name it; the drawn symbol is `aria-hidden` because it carries no text of
+    // its own. A symbol-only control without a name is announced as "button".
+    const toggle = /<button id="toc-toggle"[^>]*>/.exec(shell)?.[0] ?? ''
+    expect(toggle).toContain('aria-label="Contents"')
+    expect(toggle).toContain('aria-expanded="true"')
+    expect(toggle).toContain('aria-controls="toc"')
+    expect(toggle).not.toContain('>Contents<')
+
+    // Home is a link, not a button: it navigates. Three attributes carry it, and
+    // each fails silently on its own — a relative href after a pushState is a 404
+    // the 404 guide deliberately does not rescue, and a boosted request without
+    // `hx-select` puts the shell's whole body inside `#epub-content`.
+    //
+    // Matched as one whole tag rather than by searching the document for each
+    // attribute, because `data-shell` and `href="epubsite.html…"` also belong to
+    // the skip link: three separate `toContain`s would pass on a shell that had no
+    // home control at all.
+    const home =
+      /<a id="home"[^>]*aria-label="Back to the book's home page" hx-select="#epub-content > \*">/.exec(
+        shell,
+      )?.[0] ?? ''
+    expect(home).toContain('href="epubsite.html"')
+    expect(home).toContain('data-shell')
+
+    // Both controls are SPA-only, for the same reason as share and search: with no
+    // runtime the shell is always the landing page, and the drawer cannot open.
+    const plain = await buildSite(sampleEpub(), { spa: false })
+    const noSpa = (await readTree(plain.site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
+    expect(noSpa).not.toContain('id="home"')
   })
 })
 

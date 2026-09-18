@@ -24,8 +24,10 @@
  *   - `url` is emitted **only** for an absolute `--base-url`. A relative URL in
  *     JSON-LD denotes nothing in particular, and a consumer that resolves it
  *     against its own document produces a plausible wrong answer, which is worse
- *     than no answer. The same applies to `image` — §9 lists og:image among what
- *     the absolute form unlocks.
+ *     than no answer. The same applies to `image` — §9 lists it among what the
+ *     absolute form unlocks. There is no `og:image` meta tag: nothing in this
+ *     build emits Open Graph, and the option table's former mention of one was
+ *     simply wrong.
  *   - `@id` is identity, never location (§7.4), so it survives moving the site.
  */
 import { chapterId, normalizeBookId, normalizeIsbn } from '../ids'

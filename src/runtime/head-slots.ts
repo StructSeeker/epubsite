@@ -1,10 +1,14 @@
 /**
- * Injecting a chapter's styles into the shell's head (spec §5.4.3, §5.5).
+ * The shell's head slots: what goes in, what comes out, and in whose name
+ * (spec §5.4.3, §5.5, §5.6).
  *
  * htmx swaps in the chapter's *body*. Nothing from its `<head>` comes with it,
- * so without this step every chapter after the first would render unstyled.
+ * so without this step every chapter after the first would render unstyled. The
+ * same is true of everything else the head has to say about *which* document this
+ * is: the chapter's JSON-LD node, and the landing page's canonical link, which
+ * the reader must withdraw the moment it stops being true (§5.4).
  *
- * Two rules shape the implementation:
+ * Two rules shape the stylesheet half of the implementation:
  *
  *   1. **Everything is wrapped in `@layer epub`.** `shell.css` declares
  *      `@layer epub, shell`, so the book's rules lose to the reader's chrome
@@ -120,4 +124,57 @@ export function syncJsonLd(node: Record<string, unknown> | undefined): void {
 
   const id = typeof node['@id'] === 'string' ? node['@id'] : ''
   ldBlocks.set(id, element)
+}
+
+/**
+ * The landing page's canonical link (§5.4, §7.5).
+ *
+ * The build emits the tag statically, and only for an absolute `--base-url`. What
+ * it asserts — "this document lives here" — is true of the *landing page* and
+ * false of a chapter: once a chapter is on screen, the document is the chapter,
+ * and a canonical still pointing at the shell says every chapter is a duplicate
+ * of the reader's front page. It is the most expensive sentence in the file to get
+ * wrong, so it is removed while a chapter is current and put back afterwards.
+ *
+ * The element is **kept**, not re-created, and the sibling it had at load is kept
+ * with it. Re-inserting the original node in front of that sibling restores the
+ * head the build wrote, byte for byte in structure; re-creating the tag would
+ * append it after the runtime's own stylesheets and JSON-LD — a different
+ * document for no gain, and one that would drift every time this file grows a new
+ * slot.
+ *
+ * Resolving the element at module scope is safe by construction rather than by
+ * luck: the shell loads this module as `<script type="module">`, module scripts
+ * are deferred, so the whole `<head>` — and the `<body>` — are parsed before a
+ * line of it runs. The null branch covers a *path-form* `--base-url`, where the
+ * build emits no tag at all and both calls are genuine no-ops.
+ *
+ * `onLanding` is passed in rather than derived here: `syncChapter` is already the
+ * one place that decides whether the reader is on a chapter — the same decision
+ * `share.ts` makes from the same key — and a second derivation would be a second
+ * thing to keep in agreement.
+ */
+const landingCanonical = document.querySelector<HTMLLinkElement>('link[data-epub-canonical]')
+const canonicalAnchor = landingCanonical?.nextElementSibling ?? null
+
+export function syncCanonical(onLanding: boolean): void {
+  if (landingCanonical === null) return
+
+  if (!onLanding) {
+    landingCanonical.remove()
+    return
+  }
+  // Already there: navigating within the landing page, or a second call for the
+  // same state, must not move it.
+  if (landingCanonical.isConnected) return
+
+  // The anchor is an element the build wrote and nothing removes (the book's
+  // JSON-LD block, or the stylesheet link when `--json-ld none` is in force). The
+  // fallback covers a head that was replaced underneath us — appending is then
+  // wrong but harmless, while dropping the tag would be wrong and silent.
+  if (canonicalAnchor !== null && canonicalAnchor.isConnected) {
+    document.head.insertBefore(landingCanonical, canonicalAnchor)
+  } else {
+    document.head.appendChild(landingCanonical)
+  }
 }

@@ -76,15 +76,21 @@ makes the reader's assets and links resolve correctly:
 epubsite moby-dick.epub --base-url /books/moby/ -o public
 ```
 
-With a full URL, the build can *also* emit a canonical link, `og:image`, and the
-chapter nodes' static `url`: it knows the origin, so it can write an absolute
-address instead of leaving the field out.
+With a full URL, the build can *also* emit the landing page's canonical link and
+write the chapter nodes' static `url`: it knows the origin, so it can write an
+absolute address instead of leaving the field out.
+
+The canonical tag describes the landing page and nothing else. The reader
+withdraws it the moment a chapter is on screen and puts it back when you return,
+because "this document lives at `epubsite.html`" is true of the landing page and
+false of a chapter — said about a chapter, it tells a search engine that every
+chapter is a duplicate of the front page. A chapter is deliberately given no
+canonical at all, in either of the two addresses it is reachable at. A path-only
+base URL cannot produce any of this, because it does not know the origin.
 
 ```console
 epubsite moby-dick.epub --base-url https://example.com/books/moby/
 ```
-
-A path-only base URL cannot produce those, because it does not know the origin.
 
 Either way, the reader itself fills `url` in at runtime — see
 [the token protocol](#the-token-protocol-shareable-deep-links) below.
@@ -130,7 +136,7 @@ epubsite moby-dick.epub --dry-run --json | jq '.stats'
 |---|---|---|
 | `-o, --out <dir>` | `./dist` | Output directory, relative to your shell's cwd. |
 | `--name <file>` | `epubsite.html` | Name of the reader shell. Must not be `index.html`. |
-| `--base-url <url>` | `/` | Where the site will be deployed. Path form (`/sub/`) or absolute (`https://host/sub/`), which additionally enables canonical, the *static* JSON-LD `url` and `og:image`. |
+| `--base-url <url>` | `/` | Where the site will be deployed. Path form (`/sub/`) or absolute (`https://host/sub/`), which additionally enables the landing page's canonical link and the *static* JSON-LD `url`. |
 | `--hosting <mode>` | `404` | `none` \| `404` \| `rewrite` \| `all`. See [Hosting](#hosting). |
 | `--json-ld <mode>` | `full` | `full` \| `thin` \| `none`. How much Schema.org data to emit. |
 | `--no-json-ld` | | Shorthand for `--json-ld none`. |
@@ -211,6 +217,8 @@ namespace, rather than silently overwriting part of your book.
 | **Zero-rewrite publishing** | The book is extracted verbatim. Paths, bytes, metadata, fonts and CSS all survive. |
 | **Every chapter is a real page** | Deep-linkable, crawlable, works without JavaScript. |
 | **Single-page reading experience** | Once you enter the reader, chapter changes swap content in place via htmx — the sidebar never reloads, scroll and focus behave. Degrades to plain multi-page when JS is unavailable. |
+| **Back to the landing page** | The toolbar's home control returns to the book's front page with the same in-place swap as a chapter, so the document is never reloaded. |
+| **One honest canonical** | With an absolute `--base-url` the landing page carries a canonical link and a chapter carries none: the reader withdraws it on entry and restores it on the way back. |
 | **Sidebar from the book's own navigation** | Uses the EPUB 3 `nav` document, falling back to the NCX. Honours `page-progression-direction` for RTL books. |
 | **Per-chapter styles, restored** | Each chapter's own stylesheet links, `@import`s, inline `<style>`, `body` class, `lang` and `dir` are reapplied as you navigate — the book looks the way its publisher intended, chapter by chapter. |
 | **Shareable deep links** | A link to `/EPUB/text/@ch01.xhtml` enters the reader at the right chapter, then rewrites the address bar to the honest path. Copy the link button gives a URL that always works. |
@@ -229,9 +237,10 @@ namespace, rather than silently overwriting part of your book.
 ### The reader
 
 `epubsite.html` is the shell. Its head is fully server-rendered — title,
-description, canonical, `Book` JSON-LD — so a crawler or a reader with JavaScript
-disabled gets a complete, useful document with a table of contents and a landing
-page describing the book.
+description, the landing page's canonical (when `--base-url` names an origin),
+`Book` JSON-LD — so a crawler or a reader with JavaScript disabled gets a
+complete, useful document with a table of contents and a landing page describing
+the book.
 
 When the runtime loads, it:
 
@@ -242,13 +251,24 @@ When the runtime loads, it:
 4. enters a chapter if the URL asked for one,
 5. then, on every navigation, reapplies the chapter's styles, `lang`, `dir`,
    `body` class and JSON-LD — including the chapter's `url` array, which it
-   computes from the address you actually arrived at — and marks the current
-   sidebar entry.
+   computes from the address you actually arrived at — marks the current sidebar
+   entry, and withdraws the landing page's canonical link. Coming back it does
+   the reverse: the book's styles and the chapter's JSON-LD go, and the canonical
+   returns.
 
 `hx-boost` handles link interception, with two deliberate exceptions: a link
 **within the chapter you are already reading** performs the fragment jump
 natively rather than re-requesting the chapter, and external links are left
 alone.
+
+The toolbar's **home** control returns to the landing page the same way a chapter
+opens: the shell's response is cut down to the content pane and swapped in, so the
+document is never reloaded and the sidebar keeps its scroll position and
+expansion. It is a plain link, which is why middle-click and "open in a new tab"
+behave as expected, and why it still works when htmx never loads. The **contents**
+control beside it is drawn as a symbol rather than written as the word
+"Contents" — the word moved into `aria-label`, which is where a screen reader
+finds it and the only place it can now be.
 
 ### The token protocol: shareable deep links
 
@@ -294,6 +314,12 @@ Canonical answers "where does this chapter live" — a question the `@` form wou
 answer with a 404. A `url` entry answers "where else can it be reached", which is
 true of the `@` form by construction. The distinction is why one is emitted and
 the other is not.
+
+A chapter gets no canonical at all, not even its honest path. The reader is a
+shell whose own address is the landing page, so the only canonical it could write
+for a chapter is one made on the chapter's behalf — and the chapter, served as its
+own document, is perfectly capable of speaking for itself. It leaves the question
+alone instead.
 
 ### Hosting
 

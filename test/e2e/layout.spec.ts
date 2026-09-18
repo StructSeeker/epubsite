@@ -365,7 +365,7 @@ test('a copy attempt reports itself without destroying the icon', async ({ page 
   await expect.poll(() => button.getAttribute('data-flash')).toBeNull()
 })
 
-test('the toolbar symbols are buttons with accessible names, not text', async ({ page }) => {
+test('the toolbar symbols are controls with accessible names, not text', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto(`${baseURL}/epubsite.html`)
   await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
@@ -373,16 +373,31 @@ test('the toolbar symbols are buttons with accessible names, not text', async ({
   // A symbol-only control has to get its name from somewhere. Without an
   // `aria-label` a screen reader announces the whole thing as "button", and the
   // icon is `aria-hidden` precisely because it carries no text of its own.
+  //
+  // Home is an `<a>` rather than a `<button>` — it navigates — so each control is
+  // asked the same three questions and the tag name is deliberately not asserted.
   for (const { selector, name } of [
     { selector: '#search-open', name: 'Search this book' },
     { selector: '#share', name: 'Copy a link to this book' },
+    { selector: '#toc-collapse', name: 'Collapse all sections' },
+    { selector: '#home', name: "Back to the book's home page" },
   ]) {
-    const button = page.locator(selector)
-    await expect(button).toHaveAttribute('aria-label', name)
-    await expect(button.locator('svg')).toBeVisible()
+    const control = page.locator(selector)
+    await expect(control).toHaveAttribute('aria-label', name)
+    await expect(control.locator('svg')).toBeVisible()
     // Nothing to read: the icon is drawn, not typeset.
-    expect((await button.innerText()).trim()).toBe('')
+    expect((await control.innerText()).trim()).toBe('')
   }
+
+  // The drawer toggle is the one control the desktop reader does not have, so it
+  // is checked where it exists. It used to say "Contents"; the word moved into its
+  // accessible name, which is the only reason it can be drawn as a symbol at all.
+  await page.setViewportSize({ width: 500, height: 800 })
+  const toggle = page.locator('#toc-toggle')
+  await expect(toggle).toBeVisible()
+  await expect(toggle).toHaveAttribute('aria-label', 'Contents')
+  await expect(toggle.locator('svg')).toBeVisible()
+  expect((await toggle.innerText()).trim()).toBe('')
 })
 
 test('an 11-inch tablet is narrow in portrait and wide in landscape', async ({ page }) => {
@@ -647,7 +662,7 @@ test.describe('the mobile drawer', () => {
     await page.click('#toc-toggle')
     await expectDrawer(page, 'open')
 
-    for (const control of ['#toc-toggle', '#book-title']) {
+    for (const control of ['#toc-toggle', '#book-title', '#home']) {
       expect(await isHitTestable(page, control), `${control} is covered`).toBe(true)
     }
   })

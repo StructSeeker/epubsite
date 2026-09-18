@@ -8,7 +8,7 @@
 <blockquote>
 <p><b>本版是一次重写，不是增补。</b>v1.1 与 v1.2 从此冻结。v1.2 把改动记在文末附录 E 里，导致读者必须把正文和补丁表叠着读才能知道系统到底是什么样；v1.3 把 E.1–E.12 全部并入正文，并补齐了 v1.2 完全没写的那一类事实——<b>布局</b>：壳是一个两面板视口，它的正确性有自己的一组不变量，而这些不变量在实现中逐条以缺陷的形式暴露过。</p>
 <p>§1–§14 与附录 A–D 的<b>编号保持不变</b>，因为源码与测试里有大量形如「§5.4.3」「§8.2」「§D.2」的引用。新增内容一律追加到所在章的末尾（§1.4、§4.9、§5.9、§5.10、§5.11、§11.3），不改动既有编号。附录 E 保留为 v1.2 的历史记录，本版的修订记在附录 F。</p>
-<p><b>唯一例外：</b>章节节点的 <code>url</code> 改为数组之后，§5.8、§7.3、§7.5、§8.5 里原来说「令牌路径只用于剪贴板」的那几处断言不再成立，因此在<b>原地改写</b>。编号未动，改的是内容——把一段已被推翻的话留在原处，比改动它更糟。</p>
+<p><b>唯一例外：</b>章节节点的 <code>url</code> 改为数组之后，§5.8、§7.3、§7.5、§8.5 里原来说「令牌路径只用于剪贴板」的那几处断言不再成立，因此在<b>原地改写</b>。编号未动，改的是内容——把一段已被推翻的话留在原处，比改动它更糟。此后另有两处按同一条规则就地改写：<b>canonical 只属于落地页</b>（§4.6、§5.4、§5.6、§7.5、§8.5、§9），以及<b>工具栏的首页控件与符号化的目录开关</b>（§5.1、§5.7、§5.11、§11.1）。两处都记在附录 F。</p>
 <p><b>词汇约定：</b>「必须」= 违反即为缺陷；「应当」= 有正当理由可偏离，但须在代码里说明；「可以」= 实现自由。</p>
 </blockquote>
 
@@ -213,7 +213,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <h3>4.6 壳渲染</h3>
 
-<p>标签模板，无模板引擎。壳的 <code>&lt;head&gt;</code> <b>完整服务端渲染</b>：标题、描述、canonical、书籍 JSON-LD 全部静态，所以不执行 JavaScript 的抓取器得到的是一个完整可用的文档。</p>
+<p>标签模板，无模板引擎。壳的 <code>&lt;head&gt;</code> <b>完整服务端渲染</b>：标题、描述、canonical、书籍 JSON-LD 全部静态，所以不执行 JavaScript 的抓取器得到的是一个完整可用的文档。<b>其中 canonical 只对落地页成立</b>——它断言「本文档住在这里」，而这句话对章节是假的，因此读者进入章节后由运行期移除、回到落地页时恢复（§5.4）。</p>
 
 <p>三个属性是「这是阅读器而不是一页链接」的全部依据，各自都有一个看似合理的错误替代：<code>hx-boost="true"</code> 在 <code>&lt;body&gt;</code> 上（唯一零改写地接管书内成百上千个普通链接的办法）、<code>hx-target="#epub-content"</code>（覆盖 boost 默认的 <code>&lt;body&gt;</code>；侧边栏能在导航中存活<b>完全</b>靠它——它在目标之外，htmx 从不触碰它）、<code>hx-swap="innerHTML show:top"</code>。</p>
 
@@ -257,7 +257,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
   &lt;a class="skip-link" data-shell&gt;          ← 跳过导航，名字必须带壳文件名（§5.2）
   &lt;nav id="toc" aria-label="Table of contents"&gt;   侧边栏（面板 1）
   &lt;div id="frame"&gt;
-    &lt;header id="toolbar"&gt;                   ← 目录开关 / 书名 / 搜索 / 分享 / 进度
+    &lt;header id="toolbar"&gt;                   ← 目录开关（符号）/ 首页 / 书名 / 搜索 / 折叠 / 分享 / 进度
     &lt;main id="epub-content" tabindex="-1" aria-live="polite"&gt;   内容（面板 2）
   &lt;/div&gt;
 &lt;/body&gt;</code></pre>
@@ -287,11 +287,13 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <h3>5.4 章节资产同步（head 槽位）</h3>
 
-<p><code>syncChapter()</code> 一次做完四件事——样式、<code>body</code> 属性、侧边栏高亮、文档标题——因为它们由同一个 key 驱动，拆成多个监听器就是它们开始互相漂移的方式：一个在 <code>afterSwap</code> 触发、另一个在 <code>afterSettle</code>，页面会有若干帧停在一个没人设计过的状态里。</p>
+<p><code>syncChapter()</code> 一次做完五件事——样式、<b>落地页的 canonical 链接</b>、<code>body</code> 属性、侧边栏高亮、文档标题——因为它们由同一个 key 驱动，拆成多个监听器就是它们开始互相漂移的方式：一个在 <code>afterSwap</code> 触发、另一个在 <code>afterSettle</code>，页面会有若干帧停在一个没人设计过的状态里。</p>
 
 <p>为什么要同步 <code>body</code> 属性：htmx 交换的是章节的 <b>body 内容</b>，不是它的 <code>&lt;body&gt;</code> 元素，所以 <code>class</code>、<code>dir</code>、<code>lang</code> 会静默丢失。一本在 body 上写 <code>class="calibre"</code> 的书会在第二章丢掉它、在第一章保留它——这类缺陷会长时间伪装成样式问题。</p>
 
 <p>回到落地页时必须<b>清除</b>书的样式，否则落地页会用上一章的字体重排。</p>
+
+<p><b>canonical 槽位是其中唯一一个必须在两个方向上都正确的槽位。</b>进入章节时它必须消失：那个标签描述的是落地页，而读者此刻看的是章节，留着它就等于宣称每一章都是落地页的副本——canonical 能说出的最伤的一句假话。回到落地页时它必须回来：只删不还的实现能通过「进入章节」的检查，却会把标签永久留在删除状态，而读者按「后退」时<b>没有任何东西</b>会重新断言 <code>&lt;head&gt;</code> 的状态（htmx 的历史缓存只存 body、标题与滚动位置）。恢复的是<b>原节点本身、插回它当时的前一个后继兄弟之前</b>，而不是重新创建一个再追加到 <code>&lt;head&gt;</code> 末尾：后者会让头部结构随运行期槽位的增减而漂移，而前者还原的正是构建期写下的那份结构。</p>
 
 <h3>5.5 样式与级联层</h3>
 
@@ -303,6 +305,8 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <p>运行期只注入<b>章节</b>节点（带 <code>data-epub-ld</code> 标记），书籍节点是壳 <code>&lt;head&gt;</code> 里的静态内容、不带标记，因此永远不会被移除。这是两层一图能同时服务「执行 JS」与「不执行 JS」两批消费者的原因。</p>
 
+<p>落地页的 canonical 链接是第二个带标记的 head 槽位，标记为 <code>data-epub-canonical</code>（§5.4）。标记的含义与上面一致：这个节点归运行期管。差别在于它是唯一一个<b>必须被移除</b>才算正确的静态标签——其余槽位都是「按需注入」。</p>
+
 <h3>5.7 导航交互</h3>
 
 <p><code>hx-boost</code> 接管链接，两个<b>刻意</b>的例外：</p>
@@ -312,11 +316,13 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <li><b>外部链接</b>：标 <code>hx-boost="false"</code>。没有这个退出开关，boost 会拦截点击、<code>selfRequestsOnly</code> 会拒绝请求，链接彻底失效——比不 boost 更糟。</li>
 </ul>
 
+<p><b>返回落地页的控件</b>是壳里唯一一个 href 指向壳自身的链接，它靠两个属性成立。<code>data-shell</code> 让它在 <code>pushState</code> 之后仍指向站点根（§5.3）——相对写法会指向章节目录，而 §8.2 的引导页<b>不会</b>救它，因为那里只重定向 <code>@</code> 形状的路径。<code>hx-select="#epub-content &gt; *"</code> 把它变成一次普通的交换请求：落地页不是片段，它就是壳文档，所以增强导航请求回来的是一整份壳；而 htmx 的选择器交出的是<b>匹配到的节点本身</b>，于是选中 <code>#epub-content</code> 会把内容面板套进它自己（重复 id、两个侧边栏），选中它的<b>子节点</b>才是「把面板内容换成落地页」。目的地状态全部由 §5.4 的同一个同步负责：样式、章节 JSON-LD、<code>body</code> 属性、侧边栏高亮、canonical 一起切换；文档标题由 htmx 从响应的 <code>&lt;title&gt;</code> 恢复；滚动位置由上面的 <code>afterSettle</code> 归零。</p>
+
 <h3>5.8 分享</h3>
 
 <p>把当前章节转成<b>令牌路径</b>放进剪贴板。令牌路径在产物里只出现两处：剪贴板，以及<b>运行期注入的章节节点的 <code>url</code></b>（§7.3）。除此之外它不在 <code>readingOrder</code> 里、不在 canonical 里、不在 Open Graph 里、也不在地址栏里。</p>
 
-<p>这两处看着像多留了一道口子，其实区分是必要的：<b>canonical 断言「这才是这一章的家」，而 <code>url</code> 里的一条只断言「也可以从这里到达」。</b>前者在默认托管模式下是假的——那个地址返回 404；后者是真的——§8.2 的 404 引导确实能把读者送到这一章。把两句话当成同一句话，才会得出「令牌路径应当被彻底排除」的结论。</p>
+<p>这两处看着像多留了一道口子，其实区分是必要的：<b>canonical 断言「这才是这一章的家」，而 <code>url</code> 里的一条只断言「也可以从这里到达」。</b>前者在默认托管模式下是假的——那个地址返回 404；后者是真的——§8.2 的 404 引导确实能把读者送到这一章。把两句话当成同一句话，才会得出「令牌路径应当被彻底排除」的结论。<b>本版把这条原则推到底：章节在阅读器里根本不写 canonical</b>——不只否决令牌地址，连真实地址也不写（§5.4、§8.5）。读者是壳，壳自己的地址是落地页；替章节断言「它住在这里」本来就是章节自己的文件更有资格做的事。</p>
 
 <p>同一个 404 也解释了为什么它<b>不</b>进静态的 <code>book.hasPart</code>：那份引用是给不执行 JS 的抓取器准备的（§7.2），而令牌地址恰恰只有执行 JS 才走得到。两件事的受众不重叠，因此可以各取所需而不矛盾。</p>
 
@@ -354,7 +360,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <h3>5.11 窄屏抽屉</h3>
 
-<p>窄屏下侧边栏变成覆盖层，由工具栏上的一个按钮开关。</p>
+<p>窄屏下侧边栏变成覆盖层，由工具栏上的一个按钮开关。该按钮在宽屏下不显示（那里侧边栏常驻），在窄屏下是一个<b>符号</b>而不是文字「Contents」——它的可及名称在 <code>aria-label</code> 上（§11.1）。</p>
 
 <p><b>不变量：覆盖层不得盖住开关它的那个控件。</b>抽屉最初占满整个视口高度，于是打开它就盖住了打开它的那个按钮——唯一的出路是刷新页面。修法是几何的，不是加一个控件：抽屉从工具栏<b>下方</b>开始，开关因此始终可点，同一个按钮负责开也负责关。一个控件、一个布尔量，两者不可能互相矛盾。</p>
 
@@ -363,6 +369,8 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <p>状态放在 <code>&lt;html&gt;</code> 的 <code>data-drawer-open</code> 上：一个属性要同步的东西只有一件，样式表可以在任意断点响应它而 JavaScript 无需知道布局，<code>aria-expanded</code> 可以从它派生而不是另行跟踪。注意 <code>aria-expanded</code> 是<b>字符串</b>：<code>setAttribute(name, false)</code> 会写入字面量 "false"，辅助技术读成<i>已展开</i>，与意图完全相反。</p>
 
 <p><b>验收必须用命中测试。</b><code>toBeVisible()</code> 在被面板盖住的按钮上照样通过。真正的断言是「在按钮中心点做命中测试，结果是这个按钮」——这也正是浏览器在读者点击时做的事。</p>
+
+<p><b>样式陷阱，必须记下：</b>目录开关与其余符号控件共用一组样式，而那组选择器是两个 id 宽（<code>#toolbar #…</code>，为了压过 <code>#toolbar button</code>）。因此 <code>#toc-toggle</code> 的 <code>display: none</code>（宽屏）与窄屏下的 <code>display: inline-flex</code> 也必须写成两个 id，否则它们会<b>输给那一组</b>，开关会在所有宽屏下现形——一个只在把新控件加进那组时才出现的缺陷，与加进去的那行规则看起来毫无关系。</p>
 
 ---
 
@@ -430,7 +438,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <tr><td>spine 序号</td><td><code>position</code>、<code>#ch-N</code></td><td>解析层永不反转（E.8）</td></tr>
 <tr><td>spine 序号</td><td>清单 <code>readingOrder</code></td><td><b>只收 <code>linear</code> 项</b>。EPUB 的 <code>linear="no"</code> 标记的是「不在线性阅读序列里」的内容——封面、版权页，以及<b>导航文档自身</b>——而 Publication Manifest 没有表达该标记的词汇。把它放进 <code>readingOrder</code> 等于叫消费者把目录当正文读。那些条目改列 <code>resources</code> 并带 <code>rel="contents"</code>；阅读器侧边栏不受影响，它展示的是书自己的目录，与「什么是阅读顺序」是两个问题（E.11）</td></tr>
 <tr><td>nav 祖先</td><td><code>isPartOf</code></td><td><b>单节点</b>，不输出祖先链：链需要祖先节点具备身份，而 nav 树只给出祖先的 <i>label</i>，要拼出链条就得为书中从未命名的节点编造 <code>@id</code>。链条本想承载的信息已由 <code>articleSection</code> 与 <code>position</code> 给出（E.11）</td></tr>
-<tr><td>spine 条目路径</td><td>章节 <code>url</code></td><td><b>数组</b>，且是唯一由构建期与运行期共同写入的字段（§7.3）。构建期只在<b>绝对</b> <code>--base-url</code> 下写真实地址，并按 URL 规则百分号编码（条目名含空格的书不能写出一个带空格的「URL」）；运行期再把读者实际到达的地址与其令牌形态并入，已有的值原样保留。令牌地址<b>只</b>进这个数组：不进 canonical、不进 <code>book.hasPart</code>（§5.8、§8.5）。<code>--json-ld thin</code> 只裁剪 <code>book.hasPart</code>，运行期注入的章节节点<b>不裁剪</b>；<code>--json-ld none</code> 下根本没有章节节点，因此也就没有 <code>url</code> 可言</td></tr>
+<tr><td>spine 条目路径</td><td>章节 <code>url</code></td><td><b>数组</b>，且是唯一由构建期与运行期共同写入的字段（§7.3）。构建期只在<b>绝对</b> <code>--base-url</code> 下写真实地址，并按 URL 规则百分号编码（条目名含空格的书不能写出一个带空格的「URL」）；运行期再把读者实际到达的地址与其令牌形态并入，已有的值原样保留。令牌地址<b>只</b>进这个数组：不进 canonical、不进 <code>book.hasPart</code>（§5.8、§8.5）。<code>--json-ld thin</code> 只裁剪 <code>book.hasPart</code>，运行期注入的章节节点<b>不裁剪</b>；<code>--json-ld none</code> 下根本没有章节节点，因此也就没有 <code>url</code> 可言。另：阅读器显示章节时<b>不写 canonical</b>（§5.4），因此这个数组是阅读器对章节地址做的唯一声明</td></tr>
 </table>
 
 <h3>7.6 为什么 <code>@type</code> 是数组</h3>
@@ -486,7 +494,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <table>
 <tr><th>方案</th><th>否决理由</th></tr>
 <tr><td>在壳里用 <code>history.replaceState</code> 把裸页面「改造」成阅读器</td><td>裸页面里没有壳的代码，也没法在不改写书的前提下把它放进去</td></tr>
-<tr><td>把令牌 URL 放进 canonical / sitemap / Open Graph</td><td>默认托管模式下它 404。把搜索引擎指向一个失败，是最糟的一种 SEO</td></tr>
+<tr><td>把令牌 URL 放进 canonical / sitemap / Open Graph</td><td>默认托管模式下它 404。把搜索引擎指向一个失败，是最糟的一种 SEO。本版把这条原则用到极限：阅读器显示章节时<b>连真实地址也不写 canonical</b>，因为那个标签描述的是落地页而不是这一章（§5.4）</td></tr>
 <tr><td>为每章生成包装页</td><td>那不是零改写，而且会让同一内容有两个 URL</td></tr>
 <tr><td><b>把令牌地址列进运行期章节节点的 <code>url</code>（本版采纳，作为上一条的例外）</b></td><td><b>不与上一条矛盾，但确实放松了一条原则，因此写在这里而不是埋进 §7.3。</b>上一条否决的是把令牌地址当作<b>规范地址</b>：canonical 说的是「这才是这一章的家」，而在默认托管模式下那是个 404。数组里的一条说的是「也可以从这里到达」，这是真的。代价必须记下来：一个不执行 JS 的抓取器如果看到这个 <code>url</code>，会拿到一个它取不到的地址；但这个字段只出现在<b>需要执行 JS 才能看到的</b>章节节点里（§5.6），两个受众恰好错开，而静态的 <code>book.hasPart</code> 不带令牌地址正是为了让这个错开成立。三处输出对同一件事给出三种说法是设计，不是不一致</td></tr>
 </table>
@@ -502,7 +510,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><th>选项</th><th>默认</th><th>说明</th></tr>
 <tr><td><code>-o, --out &lt;dir&gt;</code></td><td><code>./dist</code></td><td>相对<b>调用者</b>的 cwd，绝不相对包自身</td></tr>
 <tr><td><code>--name &lt;file&gt;</code></td><td><code>epubsite.html</code></td><td>不得为 <code>index.html</code></td></tr>
-<tr><td><code>--base-url &lt;url&gt;</code></td><td><code>/</code></td><td>路径形态（<code>/sub/</code>）或绝对形态（<code>https://host/sub/</code>）。<b>只有绝对形态</b>才能产出 canonical、<b>静态</b> JSON-LD <code>url</code> 与 <code>og:image</code>——路径形态知道站点住哪，但不携带 origin。运行期注入的章节节点不受此限：它自己知道被打在哪个源下，因此总会写入 <code>url</code>（§7.3）</td></tr>
+<tr><td><code>--base-url &lt;url&gt;</code></td><td><code>/</code></td><td>路径形态（<code>/sub/</code>）或绝对形态（<code>https://host/sub/</code>）。<b>只有绝对形态</b>才能产出<b>落地页的</b> canonical 与<b>静态</b> JSON-LD <code>url</code>／<code>image</code>——路径形态知道站点住哪，但不携带 origin。canonical 另受 §5.4 约束：它描述落地页，读者进入章节后即移除。<b>本版同时删掉一处旧陈述：<code>og:image</code> 从未实现</b>——产物里没有任何 <code>og:*</code> 标签，「绝对形态解锁 og:image」是错的。运行期注入的章节节点不受此限：它自己知道被打在哪个源下，因此总会写入 <code>url</code>（§7.3）</td></tr>
 <tr><td><code>--hosting &lt;mode&gt;</code></td><td><code>404</code></td><td><code>none</code> / <code>404</code> / <code>rewrite</code> / <code>all</code>。后两者未实现</td></tr>
 <tr><td><code>--json-ld &lt;mode&gt;</code></td><td><code>full</code></td><td><code>full</code> / <code>thin</code> / <code>none</code>；<code>--no-json-ld</code> 是后者的简写。<b>不影响</b> <code>publication.json</code>（A.1）</td></tr>
 <tr><td><code>--search</code></td><td>关</td><td>构建 Pagefind 索引（附录 D）</td></tr>
@@ -569,6 +577,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <li>内容区 <code>aria-live="polite"</code>。</li>
 <li>锚点用逻辑属性（<code>inset-inline-start</code>）以便 RTL 正确翻转；<code>translateX</code> 没有各浏览器都懂的逻辑等价物，这是唯一使用物理方向的地方，且已注明。</li>
 <li>模态的关闭控件在所有宽度可见（§5.9）；<code>aria-expanded</code> 写字符串而非布尔（§5.11）。</li>
+<li><b>符号控件必须自带可及名称。</b>搜索、分享、折叠、目录开关、首页都是画出来的符号而非文字，符号一律 <code>aria-hidden</code>，名称从控件自己的 <code>aria-label</code> 来——否则辅助技术只会读出一个「按钮」。目录开关原本写的就是「Contents」，改成符号之后那个词只剩 <code>aria-label</code> 一处容身之地；<code>aria-expanded</code> 与 <code>aria-controls</code> 不受影响（它们描述的是状态与从属关系，不是外观）。</li>
 </ul>
 
 <h3>11.2 响应式</h3>
@@ -684,6 +693,8 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <li>favicon 在文档 URL 移动后仍能被取到</li>
 </ul>
 
+<p>行为类探测器另有三个，都不看几何：<b>首页控件</b>回到落地页时不重载文档（窗口上的标记证明文档未被替换）且只交换内容面板（侧边栏节点引用不变，证明没有把整份壳套进面板）；<b>落地页的 canonical</b> 在进入章节后消失，并在「后退」与首页这两条返回路径上<b>都</b>恢复——只覆盖前进方向的实现会在这里变红；<b>工具栏的每个符号控件</b>都有 <code>aria-label</code> 且自身没有文字。</p>
+
 <h3>13.3 单元测试</h3>
 
 <p>纯函数优先：路径与令牌变换（双射性质）、选项校验、导航 href 四条规则、<code>@import</code> 切分、诊断排序与去重、标识符归一化、搜索 glob 生成。</p>
@@ -703,7 +714,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <h2>14. 实施阶段</h2>
 
-<p>P0–P8 全部完成并通过验证（§1.4）。最后全量验证：类型检查、lint 干净，单元 + 集成 <b>17 个文件 / 322 个测试</b>，端到端 <b>39 个</b>（真实 Chrome）。</p>
+<p>P0–P8 全部完成并通过验证（§1.4）。此后附录 F.10 与 F.11 两处就地修订落地，全量验证：类型检查、lint 干净，单元 + 集成 <b>18 个文件 / 335 个测试</b>，端到端 <b>52 个</b>（51 通过，另 1 个是 I1 探针里按设计跳过的 <code>fixme</code>，真实 Chrome）。</p>
 
 <table>
 <tr><th>阶段</th><th>内容</th></tr>
@@ -911,9 +922,11 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><td>F.7</td><td><b>新增 §13.4 测试方法论</b></td><td>三条纪律各由一次实际浪费换来：把未复现的失败断言改成 <code>fixme</code>（等于删掉它）、写了在布局全坏时也会通过的断言（因为 <code>overflow: hidden</code> 的 body 仍可被程序化滚动）、用 <code>toBeVisible()</code> 断言一个被覆盖的按钮「可用」。这些不是风格偏好，是错误答案的具体形状</td></tr>
 <tr><td>F.8</td><td>术语表补入「面板」「不可断令牌」「降级」；§1.2 补入「不为内容重新排版」及其唯一例外</td><td>I6 要求断行，而断行是壳对书内容的唯一一处呈现干预。不写明例外，§1.2 的承诺就会与 §5.10 的实施相矛盾</td></tr>
 <tr><td>F.9</td><td><b>章节 <code>url</code> 改为数组，运行期并入真实地址与令牌地址</b>（§5.8、§7.3、§7.5、§8.5、§9）</td><td>v1.2 与 v1.3 都写了「令牌路径在整个系统里的唯一用途是剪贴板」。这条断言被一个具体需求推翻：只给真实地址时，抓取器要么索引裸页面（可读，但没有阅读器），要么根本看不到章节节点。列两个地址等于说「这一章在这两个地址都能到达」，这是真的。它要求把两句话分开——canonical（仍否决）与 <code>url</code> 列表项（采纳）——并要求运行期承担这个字段，因为「站点此刻被打在哪个源下」构建期无从得知（G7）。顺带修掉一处构造缺陷：构建期写 <code>url</code> 时直接用 zip 里的条目名，含空格的书会写出一个带空格的「URL」，而运行期写的是浏览器形态；同一个地址两种拼法使「已有则跳过」失效，地址被列两遍。改法是构建期按 URL 规则编码，运行期按规范形态比较。<b>这也是首次出现「必须原地改写既有章节」的情况，理由记在文首</b></td></tr>
+<tr><td>F.10</td><td><b>canonical 只属于落地页：进入章节时移除，回到落地页时恢复</b>（§4.6、§5.4、§5.6、§7.5、§8.5、§9）</td><td>canonical 此前是壳 <code>&lt;head&gt;</code> 里的静态标签，因此在阅读器里<b>永远</b>存在——而它断言的是「本文档住在这里」。读者进入章节之后这句话是假的，且是后果最重的一句假话：它告诉爬虫每一章都是落地页的副本。修法不是在构建期少写一个标签（那样落地页也失去了它），而是承认它是一个<b>槽位</b>：由 §5.4 的同一个同步切换，标签带 <code>data-epub-canonical</code> 让运行期找得到它。恢复时保留<b>原节点</b>并插回它当时的前一个后继兄弟之前，而不是重新创建后追加——否则 <code>&lt;head&gt;</code> 的结构会随运行期槽位的增减而漂移。<b>章节不写 canonical，连真实地址也不写</b>：读者是壳，替章节声明它住哪里不是它该做的事。同时删去一处从未兑现的旧陈述：<code>og:image</code> 从来没有被实现过</td></tr>
+<tr><td>F.11</td><td><b>工具栏新增「首页」控件，目录开关改为符号</b>（§5.1、§5.7、§5.11、§11.1）</td><td>两点合成一条，因为它们是同一个问题：工具栏此前没有任何回到落地页的路径（只能按「后退」），而那个唯一带文字的控件恰好在最窄的屏幕上最重要。首页控件是<b>链接</b>而不是按钮——它是导航，中键与新标签页都该照常工作——因此靠两个属性成立：<code>data-shell</code> 让它在 <code>pushState</code> 之后仍指向站点根，<code>hx-select="#epub-content &gt; *"</code> 让「请求壳」变成「把面板内容换成落地页」。后者是承重的：增强导航请求回来的是一整份壳，而 htmx 的 <code>hx-select</code> 交出的是<b>匹配到的节点本身</b>，选中 <code>#epub-content</code> 会把面板套进它自己（重复 id、两个侧边栏）。目录开关去掉文字之后可及名称只剩 <code>aria-label</code>；连带的样式陷阱也记进 §5.11：符号控件的样式组是两个 id 宽，<code>#toc-toggle</code> 的显隐规则若仍写一个 id 就会输给它，开关将在所有宽屏下现形</td></tr>
 </table>
 
-<h3>F.10 未决项</h3>
+<h3>F.12 未决项</h3>
 
 <table>
 <tr><th>项</th><th>状态</th></tr>

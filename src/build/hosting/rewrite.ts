@@ -50,8 +50,8 @@
  * 4. **Accept the path form of `--base-url`.** It is validated today but has no
  *    output effect (`src/build/options.ts` explains why); under rewrite it
  *    becomes the source of the baked root. Everything else in the flag's
- *    behaviour — the absolute form enabling `canonical`, JSON-LD `url` and
- *    `og:image` — is unchanged and orthogonal.
+ *    behaviour — the absolute form enabling the *landing page's* `canonical`,
+ *    JSON-LD `url` and `image` — is unchanged and orthogonal.
  *
  * ---------------------------------------------------------------------------
  * What must not change

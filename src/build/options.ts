@@ -68,8 +68,8 @@ const THEMES: readonly Theme[] = ['auto', 'light', 'dark']
  * Parses `--base-url` (spec §9).
  *
  * The two forms are not cosmetic: only the absolute form can produce output
- * that needs an origin (canonical, JSON-LD `url`, og:image), because a relative
- * URL is semantically weak in JSON-LD (§7.5).
+ * that needs an origin (the landing page's canonical, the static JSON-LD `url`
+ * and `image`), because a relative URL is semantically weak in JSON-LD (§7.5).
  */
 export function parseBaseUrl(raw: string): BaseUrl {
   const trimmed = raw.trim()
