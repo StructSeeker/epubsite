@@ -283,6 +283,68 @@ test('the chapter pane never outgrows the viewport, so the right margin survives
 })
 
 /**
+ * An overflowing toolbar scrolls; it does not hide its controls (§5.10).
+ *
+ * The defect is the drawer's, in a different place: a control painted outside its
+ * container is unreachable, and the toolbar is where that is easiest to do — its
+ * controls are sized in `rem`, so a reader with a large default font on a phone
+ * gets a row that cannot fit, and by then the book title has already shrunk to
+ * nothing. `overflow: clip` would have hidden the rest for good.
+ *
+ * The overflow is *forced* rather than hoped for, and the first assertion says so:
+ * without it the rest of the test would pass on a toolbar that happens to fit.
+ */
+test('an overflowing toolbar scrolls instead of hiding its controls (§5.10)', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 })
+  await page.goto(`${baseURL}/epubsite.html`)
+  // Injected after load, and unlayered, so it beats the stylesheet's layered `:root`.
+  await page.addStyleTag({ content: ':root { font-size: 28px; }' })
+  await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
+
+  const geometry = await page.evaluate(() => {
+    const toolbar = document.getElementById('toolbar') as HTMLElement
+    const style = getComputedStyle(toolbar)
+    const controls = [...toolbar.querySelectorAll('a[id], button')]
+    return {
+      scrollWidth: toolbar.scrollWidth,
+      clientWidth: toolbar.clientWidth,
+      // What the flex line actually gets: the content box, less the scrollbar's
+      // gutter — which `clientHeight` already excludes.
+      contentHeight:
+        toolbar.clientHeight - Number.parseFloat(style.paddingTop) - Number.parseFloat(style.paddingBottom),
+      tallest: Math.max(...controls.map((control) => control.getBoundingClientRect().height)),
+      overflowY: style.overflowY,
+    }
+  })
+
+  // The premise: this toolbar really is too wide for its container.
+  expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth)
+  // The row is one line by design, so the reader must not be able to scroll it
+  // vertically. Either value means that; Chrome computes `hidden` once the inline
+  // axis scrolls, which is why the stylesheet does not bother writing `clip`.
+  expect(['hidden', 'clip']).toContain(geometry.overflowY)
+  // …and the gutter must not eat the controls it exists to reveal. A classic
+  // ~17px scrollbar would clip them, which is why the stylesheet sizes it.
+  expect(geometry.contentHeight).toBeGreaterThanOrEqual(geometry.tallest)
+
+  // Finally, the control that was off-screen is reachable. Scrolling to the end
+  // and checking the box is the honest question: `toBeVisible()` passes for an
+  // element painted past its container's edge.
+  const reachable = await page.evaluate(() => {
+    const toolbar = document.getElementById('toolbar') as HTMLElement
+    toolbar.scrollLeft = toolbar.scrollWidth
+    const bar = toolbar.getBoundingClientRect()
+    const control = (document.getElementById('share') as HTMLElement).getBoundingClientRect()
+    return {
+      scrolled: toolbar.scrollLeft,
+      inside: control.left >= bar.left - 0.5 && control.right <= bar.right + 0.5,
+    }
+  })
+  expect(reachable.scrolled).toBeGreaterThan(0)
+  expect(reachable.inside).toBe(true)
+})
+
+/**
  * The search modal.
  *
  * Two defects, one cause. Pagefind's modal keeps its own `_isOpen` flag and
@@ -381,6 +443,8 @@ test('the toolbar symbols are controls with accessible names, not text', async (
     { selector: '#share', name: 'Copy a link to this book' },
     { selector: '#toc-collapse', name: 'Collapse all sections' },
     { selector: '#home', name: "Back to the book's home page" },
+    { selector: '#prev', name: 'Previous chapter' },
+    { selector: '#next', name: 'Next chapter' },
   ]) {
     const control = page.locator(selector)
     await expect(control).toHaveAttribute('aria-label', name)
@@ -662,7 +726,7 @@ test.describe('the mobile drawer', () => {
     await page.click('#toc-toggle')
     await expectDrawer(page, 'open')
 
-    for (const control of ['#toc-toggle', '#book-title', '#home']) {
+    for (const control of ['#toc-toggle', '#book-title', '#home', '#prev', '#next']) {
       expect(await isHitTestable(page, control), `${control} is covered`).toBe(true)
     }
   })

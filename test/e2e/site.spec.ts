@@ -261,6 +261,57 @@ test('the landing page credits the project, and a chapter does not (§5.1)', asy
   expect(failures).toEqual([])
 })
 
+test('the toolbar pages through the spine reading order (§5.7, §7.5)', async ({ page }) => {
+  const failures = watchForFailures(page)
+  await ready(page)
+
+  const path = (): string => new URL(page.url()).pathname
+  const prev = page.locator('#prev')
+  const next = page.locator('#next')
+
+  // The landing page stands *before* the reading order: there is nothing to go
+  // back to, and "next" is how a reader starts the book without the sidebar.
+  await expect(prev).toHaveAttribute('aria-disabled', 'true')
+  expect(await prev.getAttribute('href')).toBeNull()
+  expect(new URL((await next.getAttribute('href')) ?? '').pathname).toBe(
+    '/OEBPS/text/ch01.xhtml',
+  )
+
+  await next.click()
+  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  // Polled rather than read once: `click()` resolves when the click is dispatched,
+  // not when the swap it triggers has settled, so a plain `expect(path())` is a
+  // race that passes or fails on machine speed.
+  await expect.poll(path).toBe('/OEBPS/text/ch01.xhtml')
+  await expect(prev).toHaveAttribute('aria-disabled', 'true')
+
+  // The second chapter is in the spine but *not* in the book's navigation, and the
+  // pager follows the spine: this is the assertion that separates "reading order"
+  // from "what the sidebar lists".
+  await next.click()
+  await expect(page.locator('#epub-content h1')).toHaveText('Chapter 2')
+  await expect.poll(path).toBe('/OEBPS/text/ch02.xhtml')
+  await expect(prev).toHaveAttribute('href', /OEBPS\/text\/ch01\.xhtml$/)
+
+  await next.click()
+  await expect.poll(path).toBe('/OEBPS/text/deep/ch03.xhtml')
+
+  // The end of the book: next becomes unavailable, and it is *dimmed in place*
+  // rather than removed, so the toolbar does not reflow at the last chapter.
+  await expect(next).toHaveAttribute('aria-disabled', 'true')
+  expect(await next.getAttribute('href')).toBeNull()
+  await expect(prev).toBeVisible()
+
+  // And back the way we came.
+  await prev.click()
+  await expect.poll(path).toBe('/OEBPS/text/ch02.xhtml')
+  await prev.click()
+  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await expect.poll(path).toBe('/OEBPS/text/ch01.xhtml')
+  await expect(prev).toHaveAttribute('aria-disabled', 'true')
+  expect(failures).toEqual([])
+})
+
 test('a chapter’s relative images resolve after the base moved', async ({ page }) => {
   const failures = watchForFailures(page)
   // A deeply nested chapter is the case that discriminates: a sibling-relative

@@ -14,7 +14,7 @@
  * break it silently. Explicit anchoring is immune to timing, and is I2's second
  * path made literal.
  */
-import { RESERVED_PATHS, SHELL_ASSETS } from '../shared/paths'
+import { RESERVED_PATHS, SHELL_ASSETS, type EntryPath } from '../shared/paths'
 
 export interface ChapterData {
   key: string
@@ -43,6 +43,15 @@ export interface NavItem {
 export interface ShellData {
   book: { '@id': string | null; url?: string }
   byKey: Record<string, ChapterData>
+  /**
+   * The reading sequence, as entry paths (§7.5, §5.7).
+   *
+   * Branded because the pager turns these straight into URLs, and `toUrlPath` —
+   * the only thing that knows an entry path is a file name rather than a URL —
+   * requires the brand. Widening it to `string` would silently remove the one
+   * guarantee that a book called `a b.xhtml` is linked as `a%20b.xhtml`.
+   */
+  readingOrder: EntryPath[]
   nav: NavItem[]
 }
 

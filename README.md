@@ -218,6 +218,7 @@ namespace, rather than silently overwriting part of your book.
 | **Every chapter is a real page** | Deep-linkable, crawlable, works without JavaScript. |
 | **Single-page reading experience** | Once you enter the reader, chapter changes swap content in place via htmx — the sidebar never reloads, scroll and focus behave. Degrades to plain multi-page when JS is unavailable. |
 | **Back to the landing page** | The toolbar's home control returns to the book's front page with the same in-place swap as a chapter, so the document is never reloaded. |
+| **Page through the book** | The toolbar's previous/next buttons walk the spine's linear reading order — the same list `publication.json` publishes — so covers and the navigation document are not pages you turn into. A chapter the book's own table of contents omits is still visited. |
 | **One honest canonical** | With an absolute `--base-url` the landing page carries a canonical link and a chapter carries none: the reader withdraws it on entry and restores it on the way back. |
 | **Sidebar from the book's own navigation** | Uses the EPUB 3 `nav` document, falling back to the NCX. Honours `page-progression-direction` for RTL books. |
 | **Per-chapter styles, restored** | Each chapter's own stylesheet links, `@import`s, inline `<style>`, `body` class, `lang` and `dir` are reapplied as you navigate — the book looks the way its publisher intended, chapter by chapter. |
@@ -272,6 +273,17 @@ behave as expected, and why it still works when htmx never loads. The **contents
 control beside it is drawn as a symbol rather than written as the word
 "Contents" — the word moved into `aria-label`, which is where a screen reader
 finds it and the only place it can now be.
+
+Next to the title are **previous** and **next**, which walk the spine's linear
+reading order rather than the sidebar: the same sequence `publication.json`
+publishes, so a `linear="no"` cover or navigation document is skipped while a
+chapter the book's own table of contents never mentions is still visited. On the
+landing page "next" starts the book, and at either end the control is dimmed but
+still in place instead of disappearing. They are the only links in the shell whose
+`href` changes as you read, so they carry `hx-boost="false"` and the runtime
+issues the swap itself — a boosted link would keep requesting whichever chapter it
+was first processed for, and a click that does nothing at all is what that looks
+like.
 
 ### The token protocol: shareable deep links
 

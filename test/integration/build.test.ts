@@ -287,6 +287,87 @@ describe('build — a site that is the book', () => {
     expect(data.nav).toHaveLength(3)
   })
 
+  it('publishes the reading order once, to the manifest and to the shell (§7.5)', async () => {
+    const { site } = await buildSite()
+    const tree = await readTree(site.out)
+    const data = JSON.parse(
+      tree.get('_epubsite_assets/shell-data.json')?.content.toString('utf8') ?? '{}',
+    ) as { readingOrder: string[] }
+    const publication = JSON.parse(
+      tree.get('publication.json')?.content.toString('utf8') ?? '{}',
+    ) as { readingOrder: { url: string }[] }
+
+    // sampleEpub's spine is ch01, ch02, deep/ch03, nav — and the nav document is
+    // `linear="no"`, so it is in the spine but outside the reading sequence
+    // (§4.2, §7.5). The toolbar's pager walks this list, which is why the nav
+    // document is not a page it can reach: paging into a table of contents as if
+    // it were a chapter is the mistake `readingOrder` exists to prevent.
+    expect(data.readingOrder).toEqual([
+      'OEBPS/text/ch01.xhtml',
+      'OEBPS/text/ch02.xhtml',
+      'OEBPS/text/deep/ch03.xhtml',
+    ])
+    // One predicate produced both, so the manifest and the shell cannot disagree
+    // about what comes after which chapter.
+    expect(publication.readingOrder.map((entry) => entry.url)).toEqual(data.readingOrder)
+  })
+
+  it('renders the pager as anchors, mirrored for RTL (§5.7, §12)', async () => {
+    const read = async (
+      book = sampleEpub(),
+      options: Partial<BuildOptions> = {},
+    ): Promise<string> =>
+      (await readTree((await buildSite(book, options)).site.out))
+        .get('epubsite.html')
+        ?.content.toString('utf8') ?? ''
+
+    // Each pager anchor, in document order, as one string.
+    const anchors = (shell: string): string[] =>
+      [...shell.matchAll(/<a id="(?:prev|next)"[\s\S]*?<\/a>/g)].map((match) => match[0])
+
+    const ltr = anchors(await read())
+    expect(ltr).toHaveLength(2)
+    // Landing state: next starts the book. Relative and marked `data-shell`, so it
+    // is correct before the runtime exists and absolutised at load otherwise.
+    expect(ltr[1]).toContain('id="next"')
+    expect(ltr[1]).toContain('href="OEBPS/text/ch01.xhtml"')
+    expect(ltr[1]).toContain('data-shell')
+    expect(ltr[1]).toContain('aria-label="Next chapter"')
+    // Unavailable is *no href*: a link with nowhere to go is not a link, so there
+    // is nothing to activate and nothing a middle-click could open.
+    expect(ltr[0]).toContain('id="prev"')
+    expect(ltr[0]).not.toContain('href=')
+    expect(ltr[0]).toContain('aria-disabled="true"')
+    expect(ltr[0]).toContain('aria-label="Previous chapter"')
+    // Not boosted, and the reason is in `runtime/pager.ts`: htmx reads a boosted
+    // anchor's `href` once, when it processes the node, and these two hrefs change
+    // with the chapter. A boosted pager would keep requesting the chapter it was
+    // first processed for and cancel its own navigation as a "same path" click —
+    // silently, which is the only way this can fail.
+    expect(ltr[0]).toContain('hx-boost="false"')
+    expect(ltr[1]).toContain('hx-boost="false"')
+
+    // The arrows point outward in both layouts, so the mirror shows up only in
+    // *which* control each one is: in an RTL book the left-hand arrow advances the
+    // reading order. Checking positions alone would pass on a build that ignored
+    // `page-progression-direction` entirely, which is why both are asserted.
+    const mirrored = anchors(
+      await read(sampleEpub({ 'OEBPS/content.opf': sampleOpf({ progression: 'rtl' }) })),
+    )
+    expect(mirrored[0]).toContain('id="next"')
+    expect(mirrored[1]).toContain('id="prev"')
+    for (const [index, arrow] of ['M14.5 5.5', 'M9.5 5.5'].entries()) {
+      expect(ltr[index]).toContain(arrow)
+      expect(mirrored[index]).toContain(arrow)
+    }
+
+    // No runtime, so no paging: in a multi-page site the shell is the landing page
+    // and a chapter is the book's own file with no toolbar at all.
+    const noSpa = await read(sampleEpub(), { spa: false })
+    expect(noSpa).not.toContain('id="prev"')
+    expect(noSpa).not.toContain('id="next"')
+  })
+
   it('adds the origin-dependent url to shell-data only for an absolute --base-url', async () => {
     const { site } = await buildSite(sampleEpub(), {
       baseUrl: { form: 'absolute', href: 'https://example.com/books/' },

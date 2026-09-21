@@ -144,18 +144,46 @@ export function withChapterHeads(
 }
 
 /**
- * The order to *display* chapters in.
+ * The order to *display* a sequence in.
  *
- * RTL books read right to left, so §12 asks for the sidebar and prev/next
+ * RTL books read right to left, so §12 asks for the sidebar and the prev/next
  * controls to be reversed. That is a presentation concern and must never be
  * applied to `BookModel.chapters`, which is the reading order that
  * `readingOrder` and `position` are derived from.
+ *
+ * Written generically because the toolbar's pager is a sequence too: two controls
+ * laid out along the inline axis, and reversing the pair is what mirrors them.
+ * One function decides reversal, so the sidebar and the pager cannot disagree
+ * about which way a book runs.
  */
-export function presentationOrder(
-  chapters: readonly Chapter[],
+export function presentationOrder<T>(
+  items: readonly T[],
   progression: ReadingProgression,
-): readonly Chapter[] {
-  return progression === 'rtl' ? [...chapters].reverse() : chapters
+): readonly T[] {
+  return progression === 'rtl' ? [...items].reverse() : items
+}
+
+/**
+ * The reading sequence: the spine's linear items, in spine order (§4.2, §7.5).
+ *
+ * This is what `publication.json` calls `readingOrder`, and what the toolbar's
+ * prev/next controls walk. `linear="no"` items are deliberately absent: EPUB
+ * uses that flag for content outside the linear sequence — covers, copyright
+ * pages, and the navigation document itself — so a reader who pressed "next"
+ * into one would be told to read a table of contents as a chapter.
+ *
+ * A named function rather than the same `filter` at each call site because two
+ * artifacts consume it (§7.1's consistency guarantee): the manifest's
+ * `readingOrder` and the shell's. One predicate means they cannot disagree about
+ * what comes after "Two".
+ *
+ * Note the third order in this module, so nobody reaches for the wrong one:
+ * `tableOfContents` is the *book's own* navigation (which may list pages the
+ * spine does not, and vice versa), `presentationOrder` is display order, and
+ * this is the reading sequence that neither may reorder.
+ */
+export function readingOrder(model: BookModel): readonly Chapter[] {
+  return model.chapters.filter((chapter) => chapter.linear)
 }
 
 /** Looks a chapter up by its entry path, for sidebar highlighting and routing. */

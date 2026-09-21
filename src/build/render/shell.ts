@@ -29,7 +29,7 @@
  */
 import { RESERVED_PATHS, SHELL_ASSETS, toUrlPath } from '../../shared/paths'
 import { presentationNav, type NavNode } from '../epub/nav'
-import { tableOfContents, type BookModel } from '../model/book'
+import { presentationOrder, readingOrder, tableOfContents, type BookModel } from '../model/book'
 import { html, markSafe, attr, scriptJson, type SafeHtml } from './escape'
 import type { BaseUrl, Theme } from '../options'
 import type { BookNode } from '../model/structured-data'
@@ -107,6 +107,7 @@ ${renderToc(input)}
 ${tocToggle()}
 ${homeLink(input)}
 <span id="book-title">${model.title}</span>
+${pager(input)}
 ${searchButton(input)}
 ${collapseButton(input)}
 ${shareButton(spa)}
@@ -223,6 +224,67 @@ function homeLink(input: ShellInput): SafeHtml {
 }
 
 /**
+ * The previous/next pair (§5.7).
+ *
+ * Two anchors rather than buttons, for the reasons `homeLink` gives: this is
+ * navigation, so middle-click, "open in a new tab" and the no-script case keep
+ * working. What is emitted here is the **landing page's** state, which is also the
+ * honest no-script state: next starts the book, prev has nowhere to go. The
+ * runtime rewrites both on every chapter change, because the targets are
+ * chapter-dependent — the one piece of shell chrome whose `href` is.
+ *
+ * `hx-boost="false"`, and `runtime/pager.ts` explains why: htmx reads a boosted
+ * anchor's `href` *once*, when it processes the node, and closes over it. These
+ * are the only two links in the shell whose href changes afterwards, so boost
+ * would keep requesting the chapter it was first processed for — a click that does
+ * nothing, with nothing in the console to say so (§5.12). The pager issues the
+ * swap itself, through `htmx.ajax`, and leaves the href to the browser.
+ *
+ * The mirror for RTL has to be read twice, because the result looks unchanged.
+ * The pair is a sequence laid out along the inline axis, so `presentationOrder`
+ * reverses it — the same reversal the sidebar gets — while the arrows stay put,
+ * chosen by position. Both arrows point outward in both layouts, so an RTL book
+ * shows the same two arrows in the same two places and they do the opposite
+ * thing. That *is* the mirror: a reflection of a symmetric pair is itself.
+ *
+ * Only in the SPA. In multi-page mode the shell is the landing page and chapters
+ * are the book's own files with no toolbar at all, so paging would have nowhere
+ * to page to — the same reasoning as the share, search and home controls.
+ */
+function pager(input: ShellInput): SafeHtml {
+  if (!input.spa) return markSafe('')
+  const first = readingOrder(input.model)[0]?.entryPath
+  const controls = presentationOrder(PAGER_CONTROLS, input.model.progression)
+
+  return html`${controls.map((control, index) => {
+    const target = control.id === 'next' ? first : undefined
+    const initial =
+      target === undefined
+        ? // Unavailable: no `href`, so there is nothing to activate, and the three
+          // attributes that keep it announced as a link rather than as an
+          // anonymous box. `syncPager` applies exactly this set at runtime.
+          markSafe(' role="link" aria-disabled="true" tabindex="0" hx-boost="false"')
+        : // Relative + `data-shell`: correct as written if the runtime never
+          // arrives (the document base is then still the shell), and rewritten to
+          // an absolute URL at load otherwise (§5.3).
+          html` href="${toUrlPath(target)}" data-shell hx-boost="false"`
+    return html`<a id="${control.id}"${initial} aria-label="${control.label}">${PAGER_ARROWS[index]}</a>`
+  })}`
+}
+
+/**
+ * The pager's two controls, inline-start first.
+ *
+ * Ids and labels only: which arrow each carries is decided by *position*, not by
+ * identity (see `pager`), so pairing them here would encode the LTR answer into
+ * the data and then have to undo it.
+ */
+const PAGER_CONTROLS = [
+  { id: 'prev', label: 'Previous chapter' },
+  { id: 'next', label: 'Next chapter' },
+] as const
+
+/**
  * Collapse all.
  *
  * Emitted only when the table of contents actually has branches. Many books have
@@ -329,6 +391,18 @@ const LINK_ICON = html`<svg viewBox="0 0 24 24" width="20" height="20" fill="non
  * looking like it came from a different family.
  */
 const HOME_ICON = html`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 10.5L12 4l8 6.5"/><path d="M6 10v9h12v-9"/></svg>`
+
+/**
+ * The pager's two arrows, inline-start first.
+ *
+ * Named by direction rather than by "previous"/"next" on purpose: in an RTL book
+ * the left-hand arrow means *next*, so a constant called `PREV_ICON` would be a
+ * lie in half the world. `pager` pairs these with the controls by position.
+ */
+const PAGER_ARROWS = [
+  html`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>`,
+  html`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>`,
+]
 
 function metaDescription(model: BookModel): SafeHtml {
   const description = model.opf.metadata.description

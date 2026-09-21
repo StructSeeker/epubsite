@@ -300,13 +300,64 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
+    /*
+     * The block padding is what pays for the inline scrollbar below, so it is the
+     * one place where "how much room the controls need" is decided: the content
+     * box has to hold one control (~29px) *and* the gutter (~6px) inside a height
+     * that the drawer's geometry depends on. 0.75rem inline is the reader's edge
+     * margin and is unrelated to that budget.
+     */
+    padding: 0.375rem 0.75rem;
     /* Exactly the token, border included, so the drawer's top inset lands on
        this element's bottom edge rather than near it. */
     box-sizing: border-box;
     height: var(--shell-toolbar-height);
     border-block-end: 1px solid var(--shell-border);
     background: var(--shell-bg);
+    /*
+     * The toolbar scrolls sideways when its controls cannot fit (§5.10).
+     *
+     * The alternative is a control that is simply unreachable — the defect the
+     * drawer had, in a different place. It is reachable in practice: at a large
+     * default font size (the controls are sized in `rem`) and a phone-width
+     * viewport the row exceeds its container, and the book title can only shrink
+     * to zero, which it already has by then, so the flex line overflows.
+     *
+     * The block axis is clipped rather than scrollable: the row is exactly one
+     * line by design. `overflow-y: clip` would be the precise expression — "never
+     * scrolls" — but with a scrolling inline axis the engine computes it to
+     * `hidden` (measured in Chrome), so writing it would be dead code in the
+     * declaration that looks most deliberate. That is safe here for the reason it
+     * is not safe on `body`: every `scrollIntoView` and every htmx `show:top` in
+     * this shell targets a *pane*, never a toolbar control, so nothing asks this
+     * box to move.
+     *
+     * The thin scrollbar is load-bearing, not decoration: it is what keeps the
+     * gutter inside the budget described above.
+     */
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* A sideways swipe inside the toolbar must not become a browser back-gesture. */
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  /*
+   * Chrome and Safari draw their own scrollbars; `scrollbar-width` above covers
+   * Firefox. Both add up to a few pixels rather than the classic ~17, which is
+   * the difference between a visible button and a clipped one.
+   */
+  #toolbar::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  #toolbar::-webkit-scrollbar-thumb {
+    background: var(--shell-control);
+    border-radius: 3px;
+  }
+
+  #toolbar::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   #book-title {
@@ -361,32 +412,58 @@
   #toolbar #search-open,
   #toolbar #toc-collapse,
   #toolbar #toc-toggle,
-  #toolbar #home {
+  #toolbar #home,
+  #toolbar #prev,
+  #toolbar #next {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0.3rem;
     line-height: 0;
+    /* The controls keep their size while the toolbar scrolls instead of squashing
+       into unreadable slivers: their automatic minimum size is their content, and
+       stating it stops a future `flex: 1` on a sibling from eating them. */
+    flex: 0 0 auto;
   }
 
   /*
-   * The home control is an `<a>`, not a `<button>`, because it navigates — so it
-   * inherits none of the box that `#toolbar button` gives the others, that rule
-   * being element-qualified. It gets the same box here, declared once.
+   * The controls that are `<a>` rather than `<button>` — home, and the pager —
+   * because they navigate, so they inherit none of the box that `#toolbar button`
+   * gives the others, that rule being element-qualified. They get the same box
+   * here, declared once.
    */
-  #toolbar #home {
+  #toolbar #home,
+  #toolbar #prev,
+  #toolbar #next {
     border: 1px solid var(--shell-control);
     border-radius: 4px;
     color: inherit;
     text-decoration: none;
   }
 
+  /*
+   * "There is nothing on that side of the book."
+   *
+   * The control keeps its place and its size — a toolbar that reflows at the two
+   * ends of a book is a toolbar whose controls move under the reader's finger —
+   * and `syncPager` removes its `href` so there is genuinely nothing to activate.
+   * Dimmed rather than hidden, and still focusable, so "previous chapter,
+   * unavailable" can be heard rather than silently skipped.
+   */
+  #toolbar #prev[aria-disabled='true'],
+  #toolbar #next[aria-disabled='true'] {
+    opacity: 0.45;
+    cursor: default;
+  }
+
   #toolbar #share svg,
   #toolbar #search-open svg,
   #toolbar #toc-collapse svg,
   #toolbar #toc-toggle svg,
-  #toolbar #home svg {
+  #toolbar #home svg,
+  #toolbar #prev svg,
+  #toolbar #next svg {
     display: block;
     width: 1.1rem;
     height: 1.1rem;

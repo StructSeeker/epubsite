@@ -1,12 +1,12 @@
 /**
  * Per-chapter synchronisation (spec §5.4.2, §5.7).
  *
- * Five pieces of state change together whenever the reader moves to another
- * chapter — styles, the landing page's canonical link, body attributes, the
- * sidebar highlight, and the document title — and they are keyed by the same
- * thing, so they are done in one call. Splitting them into separate listeners is
- * how they drift: one fires on `afterSwap`, another on `afterSettle`, and the
- * page spends a frame or two in a state nobody designed.
+ * Six pieces of state change together whenever the reader moves to another
+ * chapter — styles, the landing page's canonical link, the toolbar's prev/next
+ * targets, body attributes, the sidebar highlight, and the document title — and
+ * they are keyed by the same thing, so they are done in one call. Splitting them
+ * into separate listeners is how they drift: one fires on `afterSwap`, another on
+ * `afterSettle`, and the page spends a frame or two in a state nobody designed.
  *
  * `syncBodyAttrs` exists because of a detail that is easy to miss: htmx swaps the
  * chapter's **body content**, not its `<body>` element, so `class`, `dir` and
@@ -16,6 +16,7 @@
  */
 import { clearStyles, syncCanonical, syncJsonLd, syncStyles } from './head-slots'
 import { withChapterUrls } from './chapter-urls'
+import { syncPager } from './pager'
 import { revealCurrent } from './toc'
 import type { ChapterData, ShellData } from './data'
 
@@ -32,6 +33,10 @@ let highlighted: HTMLElement | null = null
 
 export function syncChapter(context: ChapterSyncContext, key: string | null): void {
   highlight(key)
+  // Before the chapter/landing split, because the landing page has pager state
+  // too: "next" is how a reader starts the book without reaching for the sidebar,
+  // and `key` is not in the reading order there (see `neighbours`).
+  syncPager(context.data, key, context.root)
 
   const chapter = key === null ? undefined : context.data.byKey[key]
   if (chapter === undefined) {

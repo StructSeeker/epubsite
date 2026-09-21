@@ -20,6 +20,7 @@ import { wireDrawer } from './drawer'
 import { loadShellData } from './data'
 import { syncChapter, type ChapterSyncContext } from './chapter'
 import { entryRequestUrl, entryUrl, resolveEntry } from './entry'
+import { wirePager } from './pager'
 import { wireShare } from './share'
 import { wireSearch } from './search'
 import { wireTocCollapse } from './toc'
@@ -106,6 +107,7 @@ async function start(): Promise<void> {
   wireShare(context)
   if (htmx !== null) {
     wireNavigation()
+    wirePager(htmx)
     wireSearch({ root: SITE_ROOT, data: context.data, htmx })
   }
 

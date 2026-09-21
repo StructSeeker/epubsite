@@ -32,7 +32,7 @@
  */
 import { chapterId, normalizeBookId, normalizeIsbn } from '../ids'
 import { toUrlPath, type EntryPath } from '../../shared/paths'
-import type { BookModel } from './book'
+import { readingOrder, type BookModel } from './book'
 import type { BaseUrl, JsonLdMode } from '../options'
 import type { Diagnostics } from '../diagnostics'
 import type { Contributor } from '../epub/opf'
@@ -332,17 +332,15 @@ function manifest(input: ManifestInput): PublicationManifest {
     resources: [],
   }
 
-  for (const chapter of model.chapters) {
-    // Only linear items. EPUB's `linear="no"` marks content that is outside the
-    // linear reading sequence — covers, copyright pages, and the navigation
-    // document itself — and the manifest has no vocabulary for that flag. A
-    // reading order that silently included them would tell a consumer to read a
-    // table of contents as a chapter.
+  for (const chapter of readingOrder(model)) {
+    // Linear items only, and the filter that decides is `readingOrder` so this
+    // cannot drift from the shell's copy of the same list. The manifest has no
+    // vocabulary for `linear="no"`, so a reading order that silently included
+    // those items would tell a consumer to read a table of contents as a chapter.
     //
     // The reader's sidebar still lists them: it is showing the book's own table
     // of contents, which is a different question from "what is the reading
     // order", and §4.2 keeps them in the model for exactly that reason.
-    if (!chapter.linear) continue
     publication.readingOrder.push({
       '@type': 'LinkedResource',
       // C.7: the *real* path. A token path answers 404 under the default hosting
@@ -354,7 +352,7 @@ function manifest(input: ManifestInput): PublicationManifest {
   }
 
   const inReadingOrder = new Set<string>(
-    model.chapters.filter((chapter) => chapter.linear).map((chapter) => chapter.entryPath),
+    readingOrder(model).map((chapter) => chapter.entryPath),
   )
   for (const item of model.opf.manifestItems) {
     if (inReadingOrder.has(item.entryPath)) continue

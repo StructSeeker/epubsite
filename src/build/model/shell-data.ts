@@ -11,10 +11,11 @@
  * is also its site-relative URL path — so the runtime can go from
  * `location.pathname` to a record without any mapping table.
  */
-import type { BookModel } from './book'
+import { readingOrder, type BookModel } from './book'
 import type { ChapterHead } from '../epub/head'
 import { presentationNav, type NavNode } from '../epub/nav'
 import { withContext, type ChapterNode, type StructuredData } from './structured-data'
+import type { EntryPath } from '../../shared/paths'
 import type { BaseUrl } from '../options'
 import { stableStringify } from '../determinism'
 
@@ -56,6 +57,18 @@ export interface ShellData {
     url?: string
   }
   byKey: Record<string, ChapterData>
+  /**
+   * The reading sequence, as entry paths (§7.5).
+   *
+   * The toolbar's prev/next controls walk this list, so it must be the same
+   * sequence `publication.json` publishes — hence `readingOrder(model)`, the one
+   * predicate, rather than a filter written again here.
+   *
+   * `byKey` cannot serve as the order: it holds *every* spine item (including
+   * `linear="no"` covers and the navigation document), and its key order is a
+   * property of JSON serialization rather than a contract.
+   */
+  readingOrder: EntryPath[]
   nav: NavItem[]
 }
 export interface ShellDataInput {
@@ -110,6 +123,7 @@ export function buildShellData(input: ShellDataInput): ShellData {
       ...(base === undefined ? {} : { url: `${base}${input.shellName}` }),
     },
     byKey,
+    readingOrder: readingOrder(model).map((chapter) => chapter.entryPath),
     nav: toNavItems(presentationNav(model.nav.toc, model.progression)),
   }
 }
