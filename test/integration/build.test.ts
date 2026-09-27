@@ -710,6 +710,7 @@ describe('build — structured data (§7, A.1, C.7)', () => {
     '@id': string
     name: string
     isbn?: string
+    identifier?: string
     hasPart: { '@id': string; name: string; position: number; url?: string }[]
   }
 
@@ -722,6 +723,31 @@ describe('build — structured data (§7, A.1, C.7)', () => {
     const match = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(shell)
     expect(match, 'the shell should carry a JSON-LD block').not.toBeNull()
     return JSON.parse((match as RegExpExecArray)[1] as string) as BookGraph
+  }
+
+  /**
+   * The sample book with its `dc:identifier` replaced — or removed, when `value`
+   * is `null`, which is the shape of a book that declares no identity at all.
+   *
+   * The `unique-identifier` attribute is left dangling in that case, as it is in
+   * books that were assembled by a tool that did not check.
+   */
+  function bookIdentifying(value: string | null): Buffer {
+    const declared = '<dc:identifier id="pub-id">urn:isbn:9780000000000</dc:identifier>'
+    const replacement =
+      value === null ? '' : `<dc:identifier id="pub-id">${value}</dc:identifier>`
+    return sampleEpub({ 'OEBPS/content.opf': sampleOpf().replace(declared, replacement) })
+  }
+
+  /** Every chapter node in `shell-data.json`, which is where they all live. */
+  async function chapterNodes(out: string): Promise<{ '@id': string; isPartOf?: { '@id': string } }[]> {
+    const raw = (await readTree(out)).get('_epubsite_assets/shell-data.json')?.content.toString('utf8') ?? ''
+    const data = JSON.parse(raw) as {
+      byKey: Record<string, { jsonld?: { '@id': string; isPartOf?: { '@id': string } } }>
+    }
+    return Object.values(data.byKey)
+      .map((entry) => entry.jsonld)
+      .filter((node): node is { '@id': string; isPartOf?: { '@id': string } } => node !== undefined)
   }
 
   it('puts a complete Book node in the shell head, with every chapter in hasPart', async () => {
@@ -740,6 +766,72 @@ describe('build — structured data (§7, A.1, C.7)', () => {
     // is the entire reason `hasPart` is on the static node.
     expect(book.hasPart.map((part) => part.position)).toEqual([1, 2, 3, 4])
     expect(book.hasPart[0]?.name).toBe('Chapter 1')
+  })
+
+  it('copies a free-text dc:identifier verbatim, instead of hashing it (§7.4)', async () => {
+    // Four of the five IDPF samples identify themselves with something that is
+    // not a URN; one of them is a plain dotted string. The old rule hashed that
+    // into `urn:epubsite:…` and warned that editing the text would change the
+    // identity — an identity of our invention, replacing one the book published.
+    const declared = 'code.google.com.epub-samples.moby-dick-basic'
+    const { site, result } = await buildSite(bookIdentifying(declared))
+    const shell = (await readTree(site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
+    const book = bookNodeOf(shell)
+
+    expect(book['@id']).toBe(declared)
+    // §7.5: the selected identifier is the book's identity, so it belongs in the
+    // graph as data as well as in `@id`. It used to be dropped whenever it was
+    // not ISBN-shaped, which left the four samples above with no `identifier`
+    // field at all.
+    expect(book.identifier).toBe(declared)
+    // And nothing is faked to fill the gap where an ISBN would go.
+    expect(book.isbn).toBeUndefined()
+
+    // The identity propagates into the chapter nodes, which is the only reason
+    // their `isPartOf` and `@id` mean anything: a chapter is part of *this* book.
+    const chapters = await chapterNodes(site.out)
+    expect(chapters.find((node) => node['@id'] === `${declared}#ch-1`)?.isPartOf?.['@id']).toBe(
+      declared,
+    )
+
+    // No warning: the code it named can no longer fire, and §12.1 is documented
+    // as the complete list of what a user can be told about.
+    expect(result.diagnostics.warnings.map((warning) => warning.code)).not.toContain(
+      'W_IDENTIFIER_UNPARSEABLE',
+    )
+  })
+
+  it('identifies a book with no identifier by its title, in every artifact (§7.4)', async () => {
+    // `@id` is identity, and a book that declares none has none to copy. Leaving
+    // it out would break the graph's only link between a chapter and its book, so
+    // the title stands in — shaped into an identifier rather than copied, because
+    // it is our substitute for a claim the book did not make.
+    const { site, result } = await buildSite(bookIdentifying(null))
+    const shell = (await readTree(site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
+    const book = bookNodeOf(shell)
+
+    expect(book['@id']).toBe('sample-book')
+    expect(book.identifier).toBeUndefined()
+    expect(book.isbn).toBeUndefined()
+    // A missing identifier is not a fault: nothing is warned about either.
+    expect(result.diagnostics.warnings).toEqual([])
+
+    const data = JSON.parse(
+      (await readTree(site.out))
+        .get('_epubsite_assets/shell-data.json')
+        ?.content.toString('utf8') ?? '{}',
+    ) as { book: { '@id': string } }
+
+    // The runtime keys its chapter nodes off this value, so the two artifacts
+    // must agree — which is why both read the one `bookId` rather than applying
+    // the same rule twice.
+    expect(data.book['@id']).toBe(book['@id'])
+    const chapters = await chapterNodes(site.out)
+    expect(chapters).toHaveLength(4)
+    for (const chapter of chapters) {
+      expect(chapter['@id'].startsWith('sample-book#ch-')).toBe(true)
+      expect(chapter.isPartOf?.['@id']).toBe('sample-book')
+    }
   })
 
   it('omits url everywhere for a path-form --base-url, and emits it for an absolute one', async () => {
@@ -857,7 +949,7 @@ describe('build — structured data (§7, A.1, C.7)', () => {
     const shell = tree.get('epubsite.html')?.content.toString('utf8') ?? ''
     const data = JSON.parse(tree.get('_epubsite_assets/shell-data.json')?.content.toString('utf8') ?? '') as {
       byKey: Record<string, { jsonld?: { '@id': string; name: string; position: number } }>
-      book: { '@id': string | null }
+      book: { '@id': string }
     }
     const book = bookNodeOf(shell)
     const publication = await readJson(site.out, 'publication.json')

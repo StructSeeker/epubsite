@@ -51,8 +51,16 @@ export interface NavItem {
 
 export interface ShellData {
   book: {
-    /** The canonical identifier, or `null` when the book declares none. */
-    '@id': string | null
+    /**
+     * The book's identity, copied from `StructuredData.bookId` — the *same value*
+     * the shell's own JSON-LD carries (§7.4), not the same rule applied twice.
+     *
+     * It used to be the raw `dc:identifier` here and the normalised one there, so
+     * the two artifacts agreed only when the book happened to write a URN; the
+     * consistency test passed by coincidence. Never `null`: a book that declares
+     * no identifier is identified by its title (§7.4).
+     */
+    '@id': string
     /** Only present for an absolute `--base-url` (§7.5). */
     url?: string
   }
@@ -115,11 +123,10 @@ export function buildShellData(input: ShellDataInput): ShellData {
   }
 
   const base = input.baseUrl.form === 'absolute' ? input.baseUrl.href : undefined
-  const identifier = model.identifier?.value ?? null
 
   return {
     book: {
-      '@id': identifier,
+      '@id': input.structured.bookId,
       ...(base === undefined ? {} : { url: `${base}${input.shellName}` }),
     },
     byKey,

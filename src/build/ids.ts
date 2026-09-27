@@ -4,57 +4,65 @@
  * `@id` means **identity**, `url` means **location**, and the whole graph rests
  * on keeping them apart: a book keeps its `@id` when it moves to another domain,
  * and several mirrors of the same book can point at one node. That is why the
- * `@id` is derived from the book's own `dc:identifier` and never from where the
+ * `@id` is taken from the book's own `dc:identifier` and never from where the
  * site happens to be deployed (§7.4).
  *
- * The complication is that `dc:identifier` is not required to be a valid IRI. It
- * is often a bare ISBN, sometimes a bare UUID, and occasionally free text. The
- * four normalisation rules below are §7.4's table; the last one deliberately
- * invents a namespace rather than emitting something that merely looks like an
- * identifier, and it warns, because a book whose identity is a hash of a
- * description will change its identity when that description is edited.
- */
-import { createHash } from 'node:crypto'
-import { warn, type Diagnostics } from './diagnostics'
-
-/**
- * True for an absolute URL, which is a perfectly good identity.
+ * **The identifier is copied, not normalised.** Two shapes still gain a scheme —
+ * a bare ISBN and a bare UUID, because the prefix is lossless and makes an
+ * otherwise bare number unambiguous — and everything else is emitted as the book
+ * wrote it, including text that is not an IRI at all. The earlier design hashed
+ * what it could not parse; that invented an identity and warned that editing the
+ * text would change it. Copying is honest at the cost of IRI validity, and §7.4
+ * records the trade.
  *
- * §7.4's table did not list this case, and real books supplied it: of the five
- * IDPF samples, four identify themselves with something other than a URN, and one
- * of those — Project Gutenberg's `http://www.gutenberg.org/ebooks/25545` — is an
- * IRI already. Hashing it into `urn:epubsite:…` would throw away an identity the
- * publisher chose, and §7.4's own reasoning for preferring `dc:identifier` is
- * that it is the book's own claim about what it is.
- *
- * Recorded as revision E.13.
+ * The title is a different kind of thing and is treated differently: it is our
+ * *substitute* for a claim the book did not make, so it is shaped into something
+ * an identifier can look like rather than copied.
  */
-function isAbsoluteUrl(value: string): boolean {
-  return /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(value)
-}
 
 /** The `@id` of the book node, and the prefix of every chapter's. */
-export function normalizeBookId(raw: string, diagnostics: Diagnostics): string {
-  const value = raw.trim()
+export function bookIdentity(identifier: string | undefined, title: string): string {
+  const declared = identifier?.trim()
+  // An empty `dc:identifier` is a declaration of nothing: treat it as absent
+  // rather than emitting `@id: ""`, which is worse than either alternative.
+  if (declared === undefined || declared === '') return slug(title)
 
-  if (/^urn:(isbn|uuid):/i.test(value)) return value
-  if (isAbsoluteUrl(value)) return value
-
-  const isbn = normalizeIsbn(value)
+  const isbn = normalizeIsbn(declared)
   if (isbn !== undefined) return `urn:isbn:${isbn}`
 
-  if (isUuid(value)) return `urn:uuid:${value.toLowerCase()}`
+  if (isUuid(declared)) return `urn:uuid:${declared.toLowerCase()}`
 
-  const digest = createHash('sha256').update(value, 'utf8').digest('hex').slice(0, 16)
-  warn(
-    diagnostics,
-    'W_IDENTIFIER_UNPARSEABLE',
-    `the book's dc:identifier is not a URN, ISBN or UUID, so its JSON-LD identity ` +
-      `is derived from its text ("urn:epubsite:${digest}"). Editing that text will ` +
-      'change the identity.',
-    raw,
-  )
-  return `urn:epubsite:${digest}`
+  return declared
+}
+
+/**
+ * A title shaped into an identifier: `Moby-Dick; or, The Whale` →
+ * `moby-dick-or-the-whale`.
+ *
+ * Three details, each of which a plain `[^a-z0-9]` implementation gets wrong:
+ *
+ *   - **Non-ASCII survives.** The class is `\p{L}\p{M}\p{N}` (letters, marks,
+ *     numbers), so `Café Society` keeps its `é` and a CJK title keeps its
+ *     characters. `\p{M}` is the subtle half: XML tooling emits decomposed text,
+ *     where the accent is a *combining mark* — without it, `e` + U+0301 would
+ *     slug to `e-`, silently turning an accent into a separator.
+ *   - **NFC first**, so the composed and decomposed spellings of one title give
+ *     one identity.
+ *   - **`toLowerCase`, not `toLocaleLowerCase`**: the identity of a book must not
+ *     depend on the locale of the machine that built the site.
+ *
+ * A title with nothing alphanumeric in it (`...`, `《》`) slugs to nothing, and
+ * falls back to the trimmed title rather than to an invented word: a useless
+ * identifier that is true beats a tidy one that is not. The title itself is never
+ * empty — `selectTitle` falls back to "Untitled" — so this never returns `""`.
+ */
+function slug(title: string): string {
+  const slugged = title
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+  return slugged === '' ? title.trim() : slugged
 }
 
 /**

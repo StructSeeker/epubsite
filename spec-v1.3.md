@@ -8,7 +8,7 @@
 <blockquote>
 <p><b>本版是一次重写，不是增补。</b>v1.1 与 v1.2 从此冻结。v1.2 把改动记在文末附录 E 里，导致读者必须把正文和补丁表叠着读才能知道系统到底是什么样；v1.3 把 E.1–E.12 全部并入正文，并补齐了 v1.2 完全没写的那一类事实——<b>布局</b>：壳是一个两面板视口，它的正确性有自己的一组不变量，而这些不变量在实现中逐条以缺陷的形式暴露过。</p>
 <p>§1–§14 与附录 A–D 的<b>编号保持不变</b>，因为源码与测试里有大量形如「§5.4.3」「§8.2」「§D.2」的引用。新增内容一律追加到所在章的末尾（§1.4、§4.9、§5.9、§5.10、§5.11、§5.12、§11.3），不改动既有编号。附录 E 保留为 v1.2 的历史记录，本版的修订记在附录 F。</p>
-<p><b>唯一例外：</b>章节节点的 <code>url</code> 改为数组之后，§5.8、§7.3、§7.5、§8.5 里原来说「令牌路径只用于剪贴板」的那几处断言不再成立，因此在<b>原地改写</b>。编号未动，改的是内容——把一段已被推翻的话留在原处，比改动它更糟。此后另有五处按同一条规则就地改写：<b>canonical 只属于落地页</b>（§4.6、§5.4、§5.6、§7.5、§8.5、§9）、<b>工具栏的首页控件与符号化的目录开关</b>（§5.1、§5.7、§5.11、§11.1）、<b>落地页末尾的致谢行</b>（§4.6、§5.1、§11.1、§13.2）、<b>按 spine 阅读顺序翻页的上/下一页</b>（§5.1、§5.4、§5.7、<b>§5.12</b>、§7.5、§12、§13.2），以及<b>工具栏横向可滚</b>（§5.10、§11.3、§13.2）。五处都记在附录 F。</p>
+<p><b>唯一例外：</b>章节节点的 <code>url</code> 改为数组之后，§5.8、§7.3、§7.5、§8.5 里原来说「令牌路径只用于剪贴板」的那几处断言不再成立，因此在<b>原地改写</b>。编号未动，改的是内容——把一段已被推翻的话留在原处，比改动它更糟。此后另有六处按同一条规则就地改写：<b>canonical 只属于落地页</b>（§4.6、§5.4、§5.6、§7.5、§8.5、§9）、<b>工具栏的首页控件与符号化的目录开关</b>（§5.1、§5.7、§5.11、§11.1）、<b>落地页末尾的致谢行</b>（§4.6、§5.1、§11.1、§13.2）、<b>按 spine 阅读顺序翻页的上/下一页</b>（§5.1、§5.4、§5.7、<b>§5.12</b>、§7.5、§12、§13.2）、<b>工具栏横向可滚</b>（§5.10、§11.3、§13.2），以及<b>标识符照抄而非派生</b>（<b>§7.4</b>、§7.5、§7.7、§12、§12.1）。六处都记在附录 F。</p>
 <p><b>词汇约定：</b>「必须」= 违反即为缺陷；「应当」= 有正当理由可偏离，但须在代码里说明；「可以」= 实现自由。</p>
 </blockquote>
 
@@ -458,11 +458,31 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <p>URL 会随部署位置改变，标识符不会。用 URL 会让「换域名不必重新构建」（G7）失效：图里的每一个 <code>@id</code> 都会变成构建期的猜测。</p>
 
+<p><b>标识符照抄，不派生。</b>上一段说的是「用哪个字段当身份」，这一段说的是「它写成什么样」。规则只有一条：<code>dc:identifier</code> 的文本<b>原样照抄</b>，只有两种形态补前缀——裸 ISBN 与裸 UUID——因为补前缀是无损的，且让一个裸数字不再有歧义。其余一律按书里的写法输出。</p>
+
+<table>
+<tr><th>书里的写法</th><th><code>@id</code></th><th>为什么</th></tr>
+<tr><td><code>urn:isbn:9780000000000</code></td><td>原样</td><td>已经是一个身份</td></tr>
+<tr><td><code>http://www.gutenberg.org/ebooks/25545</code></td><td>原样</td><td>合法的 IRI，而且是出版方自己选的身份（E.13）</td></tr>
+<tr><td><code>code.google.com.epub-samples.moby-dick-basic</code></td><td>原样</td><td><b>不是 IRI，但这正是本条规则的赌注</b>。旧版在这里取文本的 SHA-256 前 16 位（F.16）</td></tr>
+<tr><td><code>9780000000000</code>、<code>0-8044-2957-x</code></td><td><code>urn:isbn:9780000000000</code>、<code>urn:isbn:080442957X</code></td><td>补前缀无损，且让裸数字不再有歧义；同一个 ISBN 的两种标点因此是一本书</td></tr>
+<tr><td><code>6EC0BD7F-11C0-…</code></td><td><code>urn:uuid:6ec0bd7f-11c0-…</code></td><td>同上（小写是 UUID 的规范形态）</td></tr>
+<tr><td>没有 <code>dc:identifier</code>，或元素为空</td><td>标题的 slug：<code>Moby-Dick; or, The Whale</code> → <code>moby-dick-or-the-whale</code></td><td>书什么都没断言，而图需要一条连接章节与书籍的边（§7.3）。这是<b>我们替书做的断言</b>，所以做法与照抄相反：<b>塑形</b></td></tr>
+</table>
+
+<p><b>旧规则在这里发过一条警告，本版把警告和产生它的哈希一起删掉。</b>旧版把无法解析的文本取 SHA-256 前 16 位、装进自造的 <code>urn:epubsite:</code> 命名空间，并发 <code>W_IDENTIFIER_UNPARSEABLE</code> 说明「改文本即改身份」。那条警告把一个事实说清楚了，却没有解决它：<b>哈希是我们发明的身份，文本是书发布的身份</b>。「换域名不必重新构建」（G7）依赖身份来自书；由我们计算出来的身份，下一次改动那段文本就会变，正是 G7 要避免的东西。代价必须明说：<b>照抄的文本可能不是合法的 IRI</b>，严格校验的 JSON-LD 消费者会报错。这是一个诚实的取舍——<b>一个不合法但真实、且永不改变的身份，胜过一个合法但由我们编造、随时会变的身份</b>。实测中五本 IDPF 样本里有四本用的不是 URN 标识符，所以这不是防御性条款。</p>
+
+<p>因此「标识符不可解析」这个状态<b>不再存在</b>：只有「照抄」与「补前缀」两种情形，没有第二种分类在背后等着失败。没有东西可警告，警告码也就不必存在——<b>§12.1 的清单因此少一项，而它依旧是完整清单</b>（F.16）。</p>
+
+<p><b>没有标识符时用标题，但标题是另一类东西。</b>书什么都没说时，图仍然需要那条把章节连到书籍的边（§7.3），于是用一个替代者。替代者是<b>我们的</b>断言，因此被<b>塑形</b>成标识符的样子：NFC 归一化、小写、把非字母数字的连续段折成一个 <code>-</code>、掐掉首尾的 <code>-</code>。三个细节各自会错一次。<b>字符类用 <code>\p{L}\p{M}\p{N}</code> 而不是 <code>[a-z0-9]</code></b>：否则中文与西里尔标题会 slug 成空串，而 <code>\p{M}</code> 尤其要紧——XML 工具链产出的是分解形，重音是<b>组合记号</b>（<code>e</code> + U+0301），漏掉它 <code>Café</code> 会变成 <code>cafe-</code>。<b>小写用 <code>toLowerCase()</code> 而不是 <code>toLocaleLowerCase()</code></b>：一本书的身份不该随构建机器的区域设置改变。<b>slug 之后为空则回退到标题原文</b>：编造一个 <code>untitled</code> 会把所有这类书并成一个节点，而一个没用但真实的标识符胜过一个好看但不真的（<code>...</code> 的 slug 就是 <code>...</code>）。</p>
+
+<p>替代者会一路传进章节 <code>@id</code>（<code>moby-dick#ch-1</code>），所以它必须能当片段前缀用；也正因如此，标题里的 <code>#</code> 会被折成 <code>-</code>——否则章节地址会多出一个片段边界。同样地，<b>替代者不会被回头当成标识符解析</b>：一个恰好长得像 ISBN 的标题不会因此变成 <code>urn:isbn:</code>，因为我们塑形的是自己的替代品，而识别 ISBN 是为了保留书<b>已经做出</b>的断言。</p>
+
 <h3>7.5 字段映射</h3>
 
 <table>
 <tr><th>来源</th><th>去向</th><th>备注</th></tr>
-<tr><td><code>dc:identifier</code></td><td>书籍 <code>@id</code> / <code>identifier</code></td><td>保留 <code>urn:isbn:</code>、<code>urn:uuid:</code>；<b>绝对 URL 原样保留</b>（它是合法的 IRI）；裸 ISBN/UUID 补前缀；其余取文本 SHA-256 前 16 位并发 <code>W_IDENTIFIER_UNPARSEABLE</code>。实测中五本 IDPF 样本里有四本用的不是 URN 标识符（其中一本用 Gutenberg 的 URL），因此这条规则是必要的而非防御性的</td></tr>
+<tr><td><code>dc:identifier</code></td><td>书籍 <code>@id</code> / <code>identifier</code></td><td><b>原样照抄</b>，只有裸 ISBN/UUID 补 <code>urn:isbn:</code>／<code>urn:uuid:</code> 前缀（无损且消歧）；没有标识符或元素为空时用标题的 slug。规则、例外与取舍见 §7.4。<code>identifier</code> 取<b>被选中</b>的那一条（§4.2）——旧版只在它不是 ISBN 时才写入第二条，结果是标识符不是 ISBN 的书（五本 IDPF 样本里的四本）一个 <code>identifier</code> 都没有；同一数值仍然不会同时落进 <code>isbn</code> 与 <code>identifier</code> 两处</td></tr>
 <tr><td>spine 序号</td><td><code>position</code>、<code>#ch-N</code></td><td>解析层永不反转（E.8）</td></tr>
 <tr><td>spine 序号</td><td>清单 <code>readingOrder</code></td><td><b>只收 <code>linear</code> 项</b>。EPUB 的 <code>linear="no"</code> 标记的是「不在线性阅读序列里」的内容——封面、版权页，以及<b>导航文档自身</b>——而 Publication Manifest 没有表达该标记的词汇。把它放进 <code>readingOrder</code> 等于叫消费者把目录当正文读。那些条目改列 <code>resources</code> 并带 <code>rel="contents"</code>；阅读器侧边栏不受影响，它展示的是书自己的目录，与「什么是阅读顺序」是两个问题（E.11）</td></tr>
 <tr><td>nav 祖先</td><td><code>isPartOf</code></td><td><b>单节点</b>，不输出祖先链：链需要祖先节点具备身份，而 nav 树只给出祖先的 <i>label</i>，要拼出链条就得为书中从未命名的节点编造 <code>@id</code>。链条本想承载的信息已由 <code>articleSection</code> 与 <code>position</code> 给出（E.11）</td></tr>
@@ -478,7 +498,8 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <ul>
 <li><b>只有两层。</b>没有 <code>Part</code>、没有章节内的 <code>Section</code>，图深不超过 2。</li>
 <li><b>不执行 JS 的消费者看不到章节节点</b>——这是刻意的：书籍节点的 <code>hasPart</code> 已经给出了每一章，章节节点是给执行 JS 的消费者的<i>增量</i>，不是唯一入口。因此<b>令牌地址只对执行 JS 的消费者可见</b>，而那恰好是能用得上令牌地址的一类（§8.5）；反过来也成立——不执行 JS 的抓取器从来看不到一个它取不到的地址，因为那个地址只存在于它看不到的节点里。</li>
-<li><b>标识符不可解析时是派生的</b>：改了文本就改了身份，警告里写明这一点。</li>
+<li><b><code>@id</code> 可能不是合法的 IRI</b>：标识符按书里的写法照抄（§7.4），书若写了一段自由文本，图里就有一段自由文本，严格校验的 JSON-LD 消费者会报错。这是为了让身份永不由我们发明而接受的代价。</li>
+<li><b>没有标识符的书，身份由标题派生</b>：改标题即改身份。但改标题本来就是一个有意的动作，而不是编译器在背后重算哈希的副作用——这正是它与 F.16 删掉的那条规则的区别。</li>
 </ul>
 
 ---
@@ -656,7 +677,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><td><code>META-INF/encryption.xml</code> 存在</td><td>退出码 5</td></tr>
 <tr><td>固定版式（<code>pre-paginated</code>）</td><td>关闭 SPA，落地页说明原因，发 <code>W_PRE_PAGINATED</code></td></tr>
 <tr><td>无导航文档</td><td>用 spine 合成目录，标签取 <code>&lt;title&gt;</code> 或 <code>&lt;h1&gt;</code>，否则 <code>Chapter N</code></td></tr>
-<tr><td>标识符不可解析</td><td>取文本 SHA-256 前 16 位，发 <code>W_IDENTIFIER_UNPARSEABLE</code>，警告里写明「改文本即改身份」</td></tr>
+<tr><td>标识符不是 URN/ISBN/UUID/URL</td><td><b>原样照抄</b>，不解析、不派生、不警告（§7.4、F.16）。代价是一个可能不合法的 IRI，换来的身份由书发布且永不改变</td></tr>
 <tr><td>书引用了站外资源</td><td>不失败。<b>报告</b>到诊断里（外部引用 / 越界链接分别列出），让作者知道什么会在离线或内网下失效</td></tr>
 <tr><td>章节标题含不可断令牌</td><td>断行，见 I6</td></tr>
 <tr><td>同一个以 <code>/</code> 开头的字符串，来源不同</td><td>清单 href 的 <code>/OEBPS/x.xhtml</code> 是合法容器根引用，<b>翻译</b>为条目路径；ZIP 条目名的 <code>/etc/passwd</code> 是 zip-slip，<b>拒绝</b>。共用一条「去掉前导斜杠」的路径会让 zip-slip 被静默洗白（E.7）</td></tr>
@@ -675,7 +696,6 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><td><code>W_ENTRY_PATH</code></td><td>条目路径需要被整理（去前导斜杠、折叠 <code>.</code>/<code>..</code>）才落到磁盘上</td></tr>
 <tr><td><code>W_EXTRA_ROOTFILE</code></td><td>站点根出现了一个既不在书里、也不是我们生成的顶层文件</td></tr>
 <tr><td><code>W_HEAD_UNREADABLE</code></td><td>某章的 <code>&lt;head&gt;</code> 解析失败；该章仍然原样复制，只是它的样式槽位为空</td></tr>
-<tr><td><code>W_IDENTIFIER_UNPARSEABLE</code></td><td><code>dc:identifier</code> 既非 URN/ISBN/UUID 也非 URL，身份由文本 SHA-256 前 16 位派生。<b>改文本即改身份</b>，警告里写明这一点</td></tr>
 <tr><td><code>W_NAV_ABSENT</code> / <code>W_NAV_MISSING</code></td><td>书没有导航文档 / 导航文档存在但读不到。目录回退到 spine 合成</td></tr>
 <tr><td><code>W_PRE_PAGINATED</code></td><td>固定版式书，SPA 关闭，落地页说明原因</td></tr>
 <tr><td><code>W_SEARCH_UNAVAILABLE</code></td><td>找不到 Pagefind 二进制，未生成索引</td></tr>
@@ -744,7 +764,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <h2>14. 实施阶段</h2>
 
-<p>P0–P8 全部完成并通过验证（§1.4）。此后附录 F.10–F.14 五处就地修订落地，全量验证：类型检查、lint 干净，单元 + 集成 <b>19 个文件 / 343 个测试</b>，端到端 <b>55 个</b>（54 通过，另 1 个是 I1 探针里按设计跳过的 <code>fixme</code>，真实 Chrome）。</p>
+<p>P0–P8 全部完成并通过验证（§1.4）。此后附录 F 的六处就地修订（F.10–F.14、F.16）落地，全量验证：类型检查、lint 干净，单元 + 集成 <b>19 个文件 / 353 个测试</b>，端到端 <b>55 个</b>（54 通过，另 1 个是 I1 探针里按设计跳过的 <code>fixme</code>，真实 Chrome）。</p>
 
 <table>
 <tr><th>阶段</th><th>内容</th></tr>
@@ -964,6 +984,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><td>F.12</td><td><b>落地页末尾加入对本项目的致谢行</b>（§4.6、§5.1、§11.1、§13.2）</td><td>它写在 <code>#epub-content</code> 里面，因此<b>只属于落地页</b>：章节打开时面板被整体替换，致谢随之消失，首页控件把落地页换回来时它一并回来；深链入口从未显示它。这是刻意选的，不是将就——把致谢固定在视口底部（<code>#frame</code> 的第三行）会让 §5.10 那句「每条承载内容的网格轨道都声明 <code>minmax(0, …)</code>」自相矛盾，因为工具栏那一行本来就已经是 <code>auto</code>；那意味着额外一次措辞收紧与一组布局探测器的重新标定，换一行代码不值得。链接是真正的锚点：<code>target="_blank"</code> 配 <code>rel="noopener noreferrer"</code>，并按 §5.7 标 <code>hx-boost="false"</code>。实测 htmx 本来也不会接管它——<code>isLocalLink</code> 比较主机名，且 <code>boostElement</code> 要求 <code>target</code> 为空或 <code>_self</code>——但把结论写出来比让它靠推断成立更好。验收用<b>真点击</b>（context 级路由桩住 github.com，断言弹窗落在仓库地址），因为被 boost 吃掉的跨源链接与能用的链接看起来完全一样。URL 是渲染器里的一个常量，不从 <code>package.json</code> 读：<code>render/</code> 不碰文件系统，<code>readPackageVersion()</code> 保持 CLI 专属。同一条决定下<b>没有</b>提供关闭开关，若出版商日后要求，再加 <code>--no-credit</code> 并记进未决项</td></tr>
 <tr><td>F.13</td><td><b>工具栏新增按 spine 阅读顺序翻页的上/下一页</b>（§5.1、§5.4、§5.7、§7.5、§12、§13.2、A.2）</td><td>读这本书此前只有两条路：侧边栏，或者后退。翻页走的是<b>阅读序列而非侧边栏</b>，两者本来就不同（§7.5、E.11）：侧边栏展示书自己的目录，翻页走 <code>linear</code> spine 项——与 <code>publication.json</code> 的 <code>readingOrder</code> 同一份列表，因此构建期把它抽成一个函数（<code>readingOrder()</code>）供两边使用，两个产物不可能对「第二章之后是什么」有不同看法；运行期则把它放进 <code>shell-data.json</code>（<code>byKey</code> 含所有 spine 项且键序无契约，不能充当序列）。查找只有一条规则：找不到当前位置就当作「在序列之前」，于是落地页、未知路径与 <code>linear="no"</code> 的文档全部得到同一个结果——后退无处可去，「下一页」指向第一章，无需任何特例。两端无目标时控件变灰留在原地（去掉 <code>href</code>，保留 <code>role=link</code> 与 Tab 停靠）。<b>实现上最值得记住的一条坑：这两个控件不能只靠 boost</b>——<code>boostElement</code> 在处理节点时读一次 <code>href</code> 并闭包住它，而它们的 href 每章都变，于是点击请求的是首次被处理时那一章，又被同路径短接取消，<b>什么也不发生且无任何报错</b>。完整的失败机制、修法的四条理由与推广规则记在 <b>§5.12</b>；这里只留结论：标 <code>hx-boost="false"</code>，交换由运行期用 <code>htmx.ajax</code> 发起，<code>href</code> 留给浏览器。RTL 下这对控件按 §12 镜像，而镜像的呈现恰好与 LTR 一样（箭头在两种方向下都朝外），所以规范里写明：只比位置看不出对错</td></tr>
 <tr><td>F.14</td><td><b>工具栏溢出时横向可滚</b>（§5.10、§11.3、§13.2）</td><td>控件尺寸用 <code>rem</code>，所以「手机宽度 + 大号默认字体」会让一整行超出容器；此时书名早已缩到 0，flex 行只能溢出，而 <code>body</code> 是 <code>overflow: clip</code>，于是最右边的控件被<b>永久藏起来</b>——抽屉那个缺陷的另一个翻版（「画在容器之外就是够不着」）。修法就是让它滚：<code>overflow-x: auto</code> 配一条细滚动条，块轴保持一行不滚。两处代价必须记账：滚动条与控件抢的正是 <code>--shell-toolbar-height</code> 那点余量，所以块内边距从 0.5rem 收到 0.375rem；<code>overflow-y: clip</code> 在这种组合下会被引擎算成 <code>hidden</code>（实测），规范因此写 <code>hidden</code> 并在 §5.10 说明为什么它在这里是安全的</td></tr>
+<tr><td>F.16</td><td><b><code>@id</code> 照抄 <code>dc:identifier</code>，没有标识符时用标题的 slug；删掉 <code>W_IDENTIFIER_UNPARSEABLE</code></b>（§7.4、§7.5、§7.7、§12、§12.1）</td><td>旧规则把「不是 URN/ISBN/UUID/URL」的标识符取文本 SHA-256 前 16 位、装进自造的 <code>urn:epubsite:</code>，并发警告说「改文本即改身份」。它想要的是让 <code>@id</code> 保持合法 IRI，代价却是把身份从书手里拿走：五本 IDPF 样本里有四本的标识符不是 URN，于是四本书的身份都由我们计算，而 G7 要的恰好是身份来自书。本版把规则与警告一起删掉——<b>照抄</b>，例外只有两个：裸 ISBN 与裸 UUID 补前缀，因为补前缀无损、且让一个裸数字不再有歧义。顺带补上一个更旧的缺口：<code>identifier</code> 原先只写「第二条非 ISBN 标识符」，于是标识符不是 ISBN 的书一个 <code>identifier</code> 都没有——那正是四本样本的样子；现在它取<b>被选中</b>的那一条（§4.2），而同一数值仍不会同时落进 <code>isbn</code> 与 <code>identifier</code>。空标识符归入「没有标识符」：「没有」是事实，<code>@id: ""</code> 是假装有。标题替代者的 slug 规则也写进 §7.4，其中 <code>\p{M}</code>（分解形里的重音是组合记号）与不随区域设置变化的小写各对应一个会静默出错的细节。<b>E.13 的 URL 特例被本条吸收</b>：此后没有「URL 是特例」这回事，URL 只是照抄的一种。§12.1 的清单因此少一项，而它依旧被声明为完整清单</td></tr>
 </table>
 
 <h3>F.15 未决项</h3>

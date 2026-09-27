@@ -41,7 +41,11 @@ export interface NavItem {
 }
 
 export interface ShellData {
-  book: { '@id': string | null; url?: string }
+  book: {
+    /** The book's identity (§7.4). The runtime only keys chapter nodes by it. */
+    '@id': string
+    url?: string
+  }
   byKey: Record<string, ChapterData>
   /**
    * The reading sequence, as entry paths (§7.5, §5.7).

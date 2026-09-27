@@ -138,7 +138,6 @@ async function runBuild(
     baseUrl: options.baseUrl,
     shellName: options.name,
     jsonLd: options.jsonLd,
-    diagnostics,
   })
 
   for (const other of container.otherRootfiles) {

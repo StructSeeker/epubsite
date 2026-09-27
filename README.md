@@ -224,7 +224,7 @@ namespace, rather than silently overwriting part of your book.
 | **Per-chapter styles, restored** | Each chapter's own stylesheet links, `@import`s, inline `<style>`, `body` class, `lang` and `dir` are reapplied as you navigate — the book looks the way its publisher intended, chapter by chapter. |
 | **Shareable deep links** | A link to `/EPUB/text/@ch01.xhtml` enters the reader at the right chapter, then rewrites the address bar to the honest path. Copy the link button gives a URL that always works. |
 | **Full-text search** | `--search` builds a Pagefind index over the spine. Results are highlighted and clicking one stays *inside* the reader. |
-| **Structured data** | Schema.org `Book` / `Chapter` JSON-LD, plus a `publication.json` Web Publication Manifest. Each chapter's `url` lists both addresses it is reachable at. |
+| **Structured data** | Schema.org `Book` / `Chapter` JSON-LD, plus a `publication.json` Web Publication Manifest. Each chapter's `url` lists both addresses it is reachable at. A `@id` is the book's own `dc:identifier`, so it survives a redeploy. |
 | **Theming** | `auto` / `light` / `dark`, implemented with `light-dark()` and `color-scheme` so it follows the OS and can be overridden. |
 | **Fixed-layout books handled honestly** | Pre-paginated EPUBs cannot be reflowed by a shell, so the build degrades to the plain multi-page site and says so on the landing page instead of pretending. |
 | **Reference auditing** | The build reports external resources and links that escape the site root, so you know what will break offline. |
@@ -352,16 +352,12 @@ image is still a book. Warnings and notes go to stderr, above the result:
 
 ```console
 $ epubsite moby-dick.epub
-warning[W_IDENTIFIER_UNPARSEABLE] the book's dc:identifier is not a URN, ISBN or UUID,
-so its JSON-LD identity is derived from its text ("urn:epubsite:dfc99ad69255e2c1").
 note[external-resource] the book references http://www.gutenberg.org
 Built 144 chapters, 10 resources (3.2 MB) into ./dist
 ```
 
 - **`W_PRE_PAGINATED`** — the book is fixed-layout, so the shell cannot reflow it.
   The site degrades to multi-page and the landing page explains why.
-- **`W_IDENTIFIER_UNPARSEABLE`** — the book's identifier is neither an ISBN, a
-  UUID nor a URL, so a stable one was derived from its bytes.
 - **`W_SEARCH_*`** — search could not be indexed, and why.
 - **External resources and out-of-tree links** — reported per chapter, so you can
   see what will fail offline or behind a firewall.
@@ -423,6 +419,13 @@ These are decisions, not oversights:
 - **Scripts in the book do not execute.** Chapter content is inserted with script
   tags disallowed, so a hosted book cannot run arbitrary code in the reader's
   session.
+- **A book's `@id` is its own `dc:identifier`, copied as written.** Identity is not
+  location: the value does not change when you move the site to another domain.
+  The consequence is that a book identifying itself with something that is not an
+  IRI — free text, a dotted string — keeps that text in the graph rather than have
+  a tidier identity invented for it. A book that declares no identifier at all is
+  identified by its title, slugged: `Moby-Dick; or, The Whale` →
+  `moby-dick-or-the-whale`.
 - **`--hosting rewrite` is not implemented** and fails loudly.
 
 ---

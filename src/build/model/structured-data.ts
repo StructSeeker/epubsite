@@ -29,12 +29,13 @@
  *     build emits Open Graph, and the option table's former mention of one was
  *     simply wrong.
  *   - `@id` is identity, never location (§7.4), so it survives moving the site.
+ *     Its value is the book's own `dc:identifier`, copied as written — even when
+ *     that text is not an IRI — or the title slugged, when it declares none.
  */
-import { chapterId, normalizeBookId, normalizeIsbn } from '../ids'
+import { bookIdentity, chapterId, normalizeIsbn } from '../ids'
 import { toUrlPath, type EntryPath } from '../../shared/paths'
 import { readingOrder, type BookModel } from './book'
 import type { BaseUrl, JsonLdMode } from '../options'
-import type { Diagnostics } from '../diagnostics'
 import type { Contributor } from '../epub/opf'
 
 export type SchemaContext = 'https://schema.org'
@@ -113,7 +114,12 @@ export interface PublicationManifest {
 }
 
 export interface StructuredData {
-  /** The normalised identity every node shares (§7.4). */
+  /**
+   * The identity every node shares (§7.4): the book's own `dc:identifier`, copied
+   * as written, or its title slugged when it declares none. `shell-data.json`
+   * carries this same value rather than recomputing it, so the two artifacts
+   * cannot disagree.
+   */
   bookId: string
   /** `null` under `--json-ld none`: no `<script>` block anywhere. */
   book: BookNode | null
@@ -128,7 +134,6 @@ export interface StructuredDataInput {
   baseUrl: BaseUrl
   shellName: string
   jsonLd: JsonLdMode
-  diagnostics: Diagnostics
 }
 
 /** The REC's required context, in this exact order (A.1). */
@@ -138,8 +143,10 @@ const PUB_CONTEXT = ['https://schema.org', 'https://www.w3.org/ns/pub-context'] 
 const CONFORMS_TO = 'https://www.w3.org/TR/pub-manifest/'
 
 export function buildStructuredData(input: StructuredDataInput): StructuredData {
-  const { model, diagnostics } = input
-  const bookId = normalizeBookId(model.identifier?.value ?? model.title, diagnostics)
+  const { model } = input
+  // §7.4: the book's own claim about what it is, copied rather than derived —
+  // and the title only when the book makes no claim at all.
+  const bookId = bookIdentity(model.identifier?.value, model.title)
   const base = input.baseUrl.form === 'absolute' ? input.baseUrl.href : undefined
   const descriptive = describe({ model, base, shellName: input.shellName })
 
@@ -207,15 +214,20 @@ function describe(input: DescribeInput): Descriptive {
     descriptive.publisher = { '@type': 'Organization', name: model.publisher }
   }
 
-  // §7.5: identifiers are split by scheme — the ISBN goes to `isbn`, the first
-  // non-ISBN one to `identifier` — so the same number never lands in both.
+  // §7.5: identifiers are split by scheme — the ISBN goes to `isbn`, so the same
+  // number never lands in both — but the *selected* identifier is still the
+  // book's identity and belongs in the graph as data as well as as `@id`. It used
+  // to be dropped here whenever it was not an ISBN, which meant a book whose only
+  // identifier was free text emitted no `identifier` field at all (4 of the 5
+  // IDPF samples are that shape).
   const selected = model.identifier
   const isbn = selected === undefined ? undefined : normalizeIsbn(selected.value)
   const other = metadata.identifiers.find(
     (identifier) => identifier !== selected && normalizeIsbn(identifier.value) === undefined,
   )
   if (isbn !== undefined) descriptive.isbn = isbn
-  if (other !== undefined) descriptive.identifier = other.value
+  const identifier = isbn === undefined ? selected : other
+  if (identifier !== undefined) descriptive.identifier = identifier.value
 
   const language = metadata.languages[0]
   if (language !== undefined) descriptive.inLanguage = language
