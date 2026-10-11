@@ -21,9 +21,9 @@
 const COLLAPSED = 'true'
 
 /** The sidebar, which the shell renders with this id (§5.1). */
-const SIDEBAR = 'toc'
+const SIDEBAR = 'epubsite-toc'
 const BRANCH = '[data-toc-branch]'
-const DISCLOSURE = '.toc-disclosure'
+const DISCLOSURE = '.epubsite-toc-disclosure'
 
 export function wireTocCollapse(): void {
   const toc = document.getElementById(SIDEBAR)
@@ -44,7 +44,7 @@ export function wireTocCollapse(): void {
     syncAllButton()
   })
 
-  const all = document.getElementById('toc-collapse')
+  const all = document.getElementById('epubsite-toc-collapse')
   if (all === null) return
 
   all.addEventListener('click', () => {
@@ -104,7 +104,7 @@ function setCollapsed(branch: Element, collapsed: boolean): void {
  * everything is already collapsed would be a lie.
  */
 function syncAllButton(): void {
-  const all = document.getElementById('toc-collapse')
+  const all = document.getElementById('epubsite-toc-collapse')
   if (all === null) return
 
   const branches = allBranches()

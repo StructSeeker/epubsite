@@ -17,6 +17,7 @@ import { UsageError } from '../build/errors'
 import {
   parseBaseUrl,
   type BuildOptions,
+  type ContentStyle,
   type HostingMode,
   type JsonLdMode,
   type Theme,
@@ -58,6 +59,10 @@ Options
       --search         Build a Pagefind index (appendix D)
       --no-spa         Multi-page site only; do not inject htmx
       --theme <t>      auto | light | dark               (default auto)
+      --content-style <s>
+                       book | reader                      (default book)
+                       reader drops the book's own stylesheets and styles
+                       its content with the reader's own, themed by --theme
       --pagefind <p>   Explicit Pagefind binary, overriding discovery
       --clean          Delete the output directory first
       --force          Write into a non-empty output directory
@@ -92,6 +97,7 @@ const CLI_OPTIONS = {
   search: { type: 'boolean' },
   'no-spa': { type: 'boolean' },
   theme: { type: 'string' },
+  'content-style': { type: 'string' },
   pagefind: { type: 'string' },
   clean: { type: 'boolean' },
   force: { type: 'boolean' },
@@ -157,6 +163,9 @@ export function parseCliArgs(argv: readonly string[]): CliInvocation {
   if (values.search === true) options.search = true
   if (values['no-spa'] === true) options.spa = false
   if (values.theme !== undefined) options.theme = values.theme as Theme
+  if (values['content-style'] !== undefined) {
+    options.contentStyle = values['content-style'] as ContentStyle
+  }
   if (values.pagefind !== undefined) options.pagefind = values.pagefind
   if (values.clean === true) options.clean = true
   if (values.force === true) options.force = true

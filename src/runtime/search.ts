@@ -41,7 +41,7 @@ export interface SearchContext {
 let prepared: Promise<void> | null = null
 
 export function wireSearch(context: SearchContext): void {
-  const trigger = document.getElementById('search-open')
+  const trigger = document.getElementById('epubsite-search-open')
   if (trigger === null) return
 
   trigger.addEventListener('click', () => {
@@ -90,7 +90,7 @@ interface PagefindModal extends HTMLElement {
 }
 
 function modalElement(): PagefindModal | null {
-  return document.getElementById('search-modal') as PagefindModal | null
+  return document.getElementById('epubsite-search-modal') as PagefindModal | null
 }
 
 async function prepare(root: URL): Promise<void> {
@@ -113,7 +113,7 @@ async function prepare(root: URL): Promise<void> {
   document.head.appendChild(config)
 
   const modal = document.createElement('pagefind-modal')
-  modal.id = 'search-modal'
+  modal.id = 'epubsite-search-modal'
   document.body.appendChild(modal)
 }
 
@@ -141,7 +141,7 @@ function wireResultClicks(context: SearchContext): void {
       closeModal()
       void context.htmx
         .ajax('GET', url.href, {
-          target: '#epub-content',
+          target: '#epubsite-content',
           swap: 'innerHTML show:top',
           // Unlike the entry protocol, a search result *is* a navigation the
           // reader will expect to be able to go Back from — so it pushes, with

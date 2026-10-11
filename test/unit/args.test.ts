@@ -58,6 +58,13 @@ describe('parseCliArgs — options', () => {
     expect(() => parseCliArgs(['b.epub', '--base-url', 'nonsense'])).toThrow(UsageError)
   })
 
+  it('carries --content-style through without validating it here', () => {
+    // The value set is validated in `resolveOptions`, so the library and the CLI
+    // cannot disagree about what is valid — the same division as `--theme`.
+    expect(parseCliArgs(['b.epub', '--content-style', 'reader']).options.contentStyle).toBe('reader')
+    expect('contentStyle' in parseCliArgs(['b.epub']).options).toBe(false)
+  })
+
   it('carries the boolean switches through', () => {
     const options = parseCliArgs([
       'b.epub',

@@ -7,8 +7,8 @@
 
 <blockquote>
 <p><b>本版是一次重写，不是增补。</b>v1.1 与 v1.2 从此冻结。v1.2 把改动记在文末附录 E 里，导致读者必须把正文和补丁表叠着读才能知道系统到底是什么样；v1.3 把 E.1–E.12 全部并入正文，并补齐了 v1.2 完全没写的那一类事实——<b>布局</b>：壳是一个两面板视口，它的正确性有自己的一组不变量，而这些不变量在实现中逐条以缺陷的形式暴露过。</p>
-<p>§1–§14 与附录 A–D 的<b>编号保持不变</b>，因为源码与测试里有大量形如「§5.4.3」「§8.2」「§D.2」的引用。新增内容一律追加到所在章的末尾（§1.4、§4.9、§5.9、§5.10、§5.11、§5.12、§11.3），不改动既有编号。附录 E 保留为 v1.2 的历史记录，本版的修订记在附录 F。</p>
-<p><b>唯一例外：</b>章节节点的 <code>url</code> 改为数组之后，§5.8、§7.3、§7.5、§8.5 里原来说「令牌路径只用于剪贴板」的那几处断言不再成立，因此在<b>原地改写</b>。编号未动，改的是内容——把一段已被推翻的话留在原处，比改动它更糟。此后另有六处按同一条规则就地改写：<b>canonical 只属于落地页</b>（§4.6、§5.4、§5.6、§7.5、§8.5、§9）、<b>工具栏的首页控件与符号化的目录开关</b>（§5.1、§5.7、§5.11、§11.1）、<b>落地页末尾的致谢行</b>（§4.6、§5.1、§11.1、§13.2）、<b>按 spine 阅读顺序翻页的上/下一页</b>（§5.1、§5.4、§5.7、<b>§5.12</b>、§7.5、§12、§13.2）、<b>工具栏横向可滚</b>（§5.10、§11.3、§13.2），以及<b>标识符照抄而非派生</b>（<b>§7.4</b>、§7.5、§7.7、§12、§12.1）。六处都记在附录 F。</p>
+<p>§1–§14 与附录 A–D 的<b>编号保持不变</b>，因为源码与测试里有大量形如「§5.4.3」「§8.2」「§D.2」的引用。新增内容一律追加到所在章的末尾（§1.4、§4.9、§5.9、§5.10、§5.11、§5.12、§5.13、§5.14、§11.3），不改动既有编号。附录 E 保留为 v1.2 的历史记录，本版的修订记在附录 F。</p>
+<p><b>唯一例外：</b>章节节点的 <code>url</code> 改为数组之后，§5.8、§7.3、§7.5、§8.5 里原来说「令牌路径只用于剪贴板」的那几处断言不再成立，因此在<b>原地改写</b>。编号未动，改的是内容——把一段已被推翻的话留在原处，比改动它更糟。此后另有六处按同一条规则就地改写：<b>canonical 只属于落地页</b>（§4.6、§5.4、§5.6、§7.5、§8.5、§9）、<b>工具栏的首页控件与符号化的目录开关</b>（§5.1、§5.7、§5.11、§11.1）、<b>落地页末尾的致谢行</b>（§4.6、§5.1、§11.1、§13.2）、<b>按 spine 阅读顺序翻页的上/下一页</b>（§5.1、§5.4、§5.7、<b>§5.12</b>、§7.5、§12、§13.2）、<b>工具栏横向可滚</b>（§5.10、§11.3、§13.2），以及<b>标识符照抄而非派生</b>（<b>§7.4</b>、§7.5、§7.7、§12、§12.1）。此后又有两处：<b>壳的类名与 id 命名空间</b>（§1.3、§5.1、§5.3、§5.7、§5.10、§5.11、§5.12、<b>§5.13</b>、§11.1、§11.2）与<b>阅读器自己的内容样式</b>（§1.2、§5.4、§5.5、<b>§5.14</b>、§9、§11.2、§12、A.2）——两者都已落地实现，因此原地改写不是选择而是必需。八处都记在附录 F。</p>
 <p><b>词汇约定：</b>「必须」= 违反即为缺陷；「应当」= 有正当理由可偏离，但须在代码里说明；「可以」= 实现自由。</p>
 </blockquote>
 
@@ -42,7 +42,7 @@
 <tr><td><b>把书放在站点子目录</b>（v1.1 曾预留的 <code>--book-dir</code>）</td><td>本方案的正确性建立在<b>站点根 = EPUB 根</b>这一条恒等式上（§3.1）。子目录布局会在三处同时打破它：<code>SITE_ROOT</code> 不再是书根（§5.2、I4）、404 引导的前缀剥离失去唯一答案（§8.3 约束 2）、<code>?p=</code> 不再是站点相对路径（§8.2）。收益只是「站点根多一层」，代价是三处同时变复杂——<b>永久移除</b>，详见 E.9</td></tr>
 <tr><td>同一个站点里放多本书</td><td>默认假设「一本书就是一个站点」。多书用部署路径（<code>/book-a/</code>、<code>/book-b/</code>）区分</td></tr>
 <tr><td><b>分页（<code>numberOfPages</code>、<code>pagination</code>）</b></td><td>可重排 EPUB 本就没有固定分页。一个取自不存在数据源的字段，正确的读法是<b>不输出</b>，而不是输出一个看起来像样但没依据的数字，详见 E.10</td></tr>
-<tr><td>为书的内容<b>重新排版</b>（重写字号、重排章节、重新分页）</td><td>壳只做两件事：约束视口、叠加级联层（§5.5）。它<b>不</b>接管书的排版。<b>唯一例外</b>是 I6 要求的可断行（§2）——那是让内容能待在列里所必需的，且只在原本就会溢出的长令牌上生效</td></tr>
+<tr><td>为书的内容<b>重新排版</b>（重写字号、重排章节、重新分页）</td><td>壳只做两件事：约束视口、叠加级联层（§5.5）。它<b>不</b>接管书的排版。两处例外，且都写明：I6 要求的可断行（§2）——那是让内容能待在列里所必需的，且只在原本就会溢出的长令牌上生效；以及<b>出版方明确要求用阅读器自己的样式表</b>（<code>--content-style reader</code>，§5.14）。后者是<b>选项</b>而不是默认：不给这个选项，书就保留自己的排版；给了，壳就确实接管了——因为「接管」正是这条选项的全部含义</td></tr>
 </table>
 
 <h3>1.3 术语</h3>
@@ -51,8 +51,9 @@
 <tr><th>术语</th><th>定义</th></tr>
 <tr><td><b>壳（shell）</b></td><td>生成的 <code>epubsite.html</code>：侧边栏 + 工具栏 + 内容容器，装载 htmx</td></tr>
 <tr><td><b>章节文件</b></td><td>EPUB 内的 XHTML 文档（<code>spine</code> 中的项），原样复制到站点根</td></tr>
-<tr><td><b>内容区</b></td><td><code>#epub-content</code>，唯一被 htmx 交换的节点</td></tr>
-<tr><td><b>面板（pane）</b></td><td>壳里各自独立滚动的两个区域：<code>#toc</code> 与 <code>#epub-content</code>（§5.10）</td></tr>
+<tr><td><b>内容区</b></td><td><code>#epubsite-content</code>，唯一被 htmx 交换的节点</td></tr>
+<tr><td><b>面板（pane）</b></td><td>壳里各自独立滚动的两个区域：<code>#epubsite-toc</code> 与 <code>#epubsite-content</code>（§5.10）</td></tr>
+<tr><td><b>壳命名空间</b></td><td>壳自己输出的一切类名与 id 共用的前缀 <code>epubsite-</code>（§5.13）。这些选择器与书的标记在<b>同一个文档</b>里求值，所以不前缀就会撞上书的元素</td></tr>
 <tr><td><b>令牌路径</b></td><td>形如 <code>…/text/@ch3.xhtml</code> 的 URL：不对应任何真实文件，作为分享与无障碍入口用的路由令牌。它也只在这一个意义上出现——不进 canonical，但会进运行期章节节点的 <code>url</code>（§7.3、§8.5）</td></tr>
 <tr><td><b>真实路径</b></td><td>形如 <code>…/text/ch3.xhtml</code> 的 URL：指向书里实际存在的文件</td></tr>
 <tr><td><b>保留命名空间</b></td><td>站点根下由构建期独占的路径集合（§3.2）</td></tr>
@@ -73,6 +74,7 @@
 <tr><td><code>serve</code>（本地预览）</td><td><b>已实现</b></td></tr>
 <tr><td><code>--hosting rewrite</code> 与 <code>all</code></td><td><b>未实现</b>。按约定留报错桩，退出码 2，桩的注释里写明完整契约（§8.4、C.6.1）</td></tr>
 <tr><td>CLI 暴露 <code>--host</code></td><td><b>未实现</b>。<code>startServer</code> 接受 <code>host</code>，但 <code>args.ts</code> 的选项表里没有它，命令行传了会报 usage 错。记在附录 F 未决项</td></tr>
+<tr><td><code>--content-style reader</code>（阅读器自己的内容样式）</td><td><b>已实现</b>（§5.14）</td></tr>
 </table>
 
 <p>真机验证：IDPF EPUB 3 样本五种（<code>accessible_epub_3</code>、<code>cc-shared-culture</code>、<code>childrens-literature</code>、<code>moby-dick</code>、<code>page-blanche</code>）与一份商用技术书（Apress，27 章，含固定版式外的全部边界情形）全部构建通过。</p>
@@ -215,9 +217,9 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <p>标签模板，无模板引擎。壳的 <code>&lt;head&gt;</code> <b>完整服务端渲染</b>：标题、描述、canonical、书籍 JSON-LD 全部静态，所以不执行 JavaScript 的抓取器得到的是一个完整可用的文档。<b>其中 canonical 只对落地页成立</b>——它断言「本文档住在这里」，而这句话对章节是假的，因此读者进入章节后由运行期移除、回到落地页时恢复（§5.4）。</p>
 
-<p>落地页的标记同样服务端渲染，末尾一行是<b>对本项目的致谢</b>：<code>&lt;footer class="credit"&gt;Built with &lt;a href="…"&gt;epubsite&lt;/a&gt;&lt;/footer&gt;</code>。它写在 <code>#epub-content</code> <b>里面</b>，于是「只属于落地页」是位置的结果而不是一条需要维护的条件：章节打开时整个面板被书的标记替换，致谢随之离开，首页控件把这一段换回来时它也一并回来（§5.7）。从令牌路径或 <code>?p=</code> 直接进入章节的读者从未看到它。它不上 404 引导页，也不上中转页——那两个文件不是壳。</p>
+<p>落地页的标记同样服务端渲染，末尾一行是<b>对本项目的致谢</b>：<code>&lt;footer class="epubsite-credit"&gt;Built with &lt;a href="…"&gt;epubsite&lt;/a&gt;&lt;/footer&gt;</code>。它写在 <code>#epubsite-content</code> <b>里面</b>，于是「只属于落地页」是位置的结果而不是一条需要维护的条件：章节打开时整个面板被书的标记替换，致谢随之离开，首页控件把这一段换回来时它也一并回来（§5.7）。从令牌路径或 <code>?p=</code> 直接进入章节的读者从未看到它。它不上 404 引导页，也不上中转页——那两个文件不是壳。</p>
 
-<p>三个属性是「这是阅读器而不是一页链接」的全部依据，各自都有一个看似合理的错误替代：<code>hx-boost="true"</code> 在 <code>&lt;body&gt;</code> 上（唯一零改写地接管书内成百上千个普通链接的办法）、<code>hx-target="#epub-content"</code>（覆盖 boost 默认的 <code>&lt;body&gt;</code>；侧边栏能在导航中存活<b>完全</b>靠它——它在目标之外，htmx 从不触碰它）、<code>hx-swap="innerHTML show:top"</code>。</p>
+<p>三个属性是「这是阅读器而不是一页链接」的全部依据，各自都有一个看似合理的错误替代：<code>hx-boost="true"</code> 在 <code>&lt;body&gt;</code> 上（唯一零改写地接管书内成百上千个普通链接的办法）、<code>hx-target="#epubsite-content"</code>（覆盖 boost 默认的 <code>&lt;body&gt;</code>；侧边栏能在导航中存活<b>完全</b>靠它——它在目标之外，htmx 从不触碰它）、<code>hx-swap="innerHTML show:top"</code>。</p>
 
 <p><code>--no-spa</code> 不输出这三个属性，也不输出运行期模块，于是同一份标记就是一份普通的多页站点。这不是「降级模式」，而是 SPA 层所增强的基线。</p>
 
@@ -255,16 +257,18 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <h3>5.1 壳结构</h3>
 
-<pre><code>&lt;body hx-boost="true" hx-target="#epub-content" hx-swap="innerHTML show:top" hx-indicator="#progress"&gt;
-  &lt;a class="skip-link" data-shell&gt;          ← 跳过导航，名字必须带壳文件名（§5.2）
-  &lt;nav id="toc" aria-label="Table of contents"&gt;   侧边栏（面板 1）
-  &lt;div id="frame"&gt;
-    &lt;header id="toolbar"&gt;                   ← 目录开关（符号）/ 首页 / 书名 / 上一页 / 下一页 / 搜索 / 折叠 / 分享 / 进度
-    &lt;main id="epub-content" tabindex="-1" aria-live="polite"&gt;   内容（面板 2；落地页末尾为致谢行）
+<pre><code>&lt;body hx-boost="true" hx-target="#epubsite-content" hx-swap="innerHTML show:top" hx-indicator="#epubsite-progress"&gt;
+  &lt;a class="epubsite-skip-link" data-shell&gt;          ← 跳过导航，名字必须带壳文件名（§5.2）
+  &lt;nav id="epubsite-toc" aria-label="Table of contents"&gt;   侧边栏（面板 1）
+  &lt;div id="epubsite-frame"&gt;
+    &lt;header id="epubsite-toolbar"&gt;                   ← 目录开关（符号）/ 首页 / 书名 / 上一页 / 下一页 / 搜索 / 折叠 / 分享 / 进度
+    &lt;main id="epubsite-content" tabindex="-1" aria-live="polite"&gt;   内容（面板 2；落地页末尾为致谢行）
   &lt;/div&gt;
 &lt;/body&gt;</code></pre>
 
-<p><code>#epub-content</code> 是唯一被交换的节点；<code>#toc</code> 与 <code>#toolbar</code> 都在它之外，这是侧边栏 DOM 节点引用不变的全部原因（G3）。<b>落地页末尾的致谢行也在它里面，因此共享同一命运</b>：它是落地页的一部分，不是阅读器永久 chrome 的一部分。</p>
+<p><b>壳输出的每一个类名与 id 都带 <code>epubsite-</code> 前缀</b>（§5.13）。这不是整理癖：这些选择器与书的标记在同一个文档里求值，一个通用的名字（<code>#toc</code>、<code>.toc-row</code>、<code>.notice</code>）就是一条等着被书的样式表撞上的规则，两个方向都错。</p>
+
+<p><code>#epubsite-content</code> 是唯一被交换的节点；<code>#epubsite-toc</code> 与 <code>#epubsite-toolbar</code> 都在它之外，这是侧边栏 DOM 节点引用不变的全部原因（G3）。<b>落地页末尾的致谢行也在它里面，因此共享同一命运</b>：它是落地页的一部分，不是阅读器永久 chrome 的一部分。</p>
 
 <p><strong>禁止在壳的任何元素上加 <code>data-pagefind-body</code></strong>。它是全站开关：标在壳上，索引里就只剩下壳。</p>
 
@@ -272,7 +276,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <p>站点根在启动时读取一次并<b>冻结</b>（<code>SITE_ROOT</code>），来源是 <code>&lt;html data-site-root&gt;</code>，缺省为 <code>.</code>。冻结是关键：导航会改变文档基准，如果 <code>SITE_ROOT</code> 是「当前基准的某处」，它就会在每次导航后漂移，而 I2 要求它是一个不动点。</p>
 
-<p>跳过链接在 SPA 模式下必须写明壳文件名：<code>pushState</code> 之后裸 <code>#epub-content</code> 会对着章节目录解析，把读者带离阅读器。</p>
+<p>跳过链接在 SPA 模式下必须写明壳文件名：<code>pushState</code> 之后裸 <code>#epubsite-content</code> 会对着章节目录解析，把读者带离阅读器。</p>
 
 <h3>5.3 壳自有链接绝对化（I2）</h3>
 
@@ -283,7 +287,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <li><b>非属性引用点</b>：<code>fetch</code>、动态 <code>import</code>、<code>@import</code>、<code>htmx.ajax</code> 在各自出现处直接 <code>new URL(…, SITE_ROOT)</code>。给它们加标记没有意义——标记是给「浏览器会读属性」这件事用的。</li>
 </ol>
 
-<p>标在 <code>data-shell</code> 上的选择本身有理由：用选择器（如 <code>#toc a</code>）挑选会<b>静默漏掉</b>下一个被加进壳的链接，而失败只在导航之后、在没人测的页面上出现。</p>
+<p>标在 <code>data-shell</code> 上的选择本身有理由：用选择器（如 <code>#epubsite-toc a</code>）挑选会<b>静默漏掉</b>下一个被加进壳的链接，而失败只在导航之后、在没人测的页面上出现。</p>
 
 <p><b>favicon 属于第 1 类</b>（§2.2）：它是 DOM 属性，而且会被重新解析。</p>
 
@@ -302,6 +306,8 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <p><code>shell.css</code> 的第一行 <code>@layer epub, shell;</code> 是承重的，不是装饰。它固定整个文档的层序，于是书贡献的每一条规则（运行期注入时都裹在 <code>@layer epub</code> 里）都输给壳的每一条规则，<b>与选择器特异性和源序无关</b>。</p>
 
 <p>但层序只解决<b>冲突</b>。壳没声明的属性，书仍然生效——这是 I6 那类缺陷的温床：书若在某处设了 <code>white-space</code>，壳自有的元素也会被影响，因为壳没表态。规则：<b>决定壳自身布局的属性，壳必须自己声明</b>（§5.10）。</p>
+
+<p><b>层的成员可以换，层序不变。</b>运行期注入到 <code>@layer epub</code> 的那一份，在 <code>--content-style reader</code> 下就是阅读器自己的排版默认值而不是书的样式表（§5.14）。这不是新开一层，而是同一个槽位换内容：§5.10 的布局不变量仍然压在它上面，否则「读者自己的排版」会成为一种能撑开侧边栏的力量。</p>
 
 <h3>5.6 章节 JSON-LD 的注入</h3>
 
@@ -323,7 +329,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <p><b>没有目标时控件留在原地并变灰</b>（<code>aria-disabled</code> + 去掉 <code>href</code>），不隐藏也不重排：工具栏在书的开头和结尾处跳动，比一个暂时不可用的按钮更让人困惑。去掉 <code>href</code> 是实话——一个无处可去的链接不是链接，因此没有可激活的东西，中键也不会打开什么；<code>role="link"</code> 与保留的 <code>tabindex</code> 让它在辅助技术里仍然被读成「上一章，不可用」，而不是默默从 Tab 顺序里消失。</p>
 
-<p><b>返回落地页的控件</b>是壳里唯一一个 href 指向壳自身的链接，它靠两个属性成立。<code>data-shell</code> 让它在 <code>pushState</code> 之后仍指向站点根（§5.3）——相对写法会指向章节目录，而 §8.2 的引导页<b>不会</b>救它，因为那里只重定向 <code>@</code> 形状的路径。<code>hx-select="#epub-content &gt; *"</code> 把它变成一次普通的交换请求：落地页不是片段，它就是壳文档，所以增强导航请求回来的是一整份壳；而 htmx 的选择器交出的是<b>匹配到的节点本身</b>，于是选中 <code>#epub-content</code> 会把内容面板套进它自己（重复 id、两个侧边栏），选中它的<b>子节点</b>才是「把面板内容换成落地页」。目的地状态全部由 §5.4 的同一个同步负责：样式、章节 JSON-LD、<code>body</code> 属性、侧边栏高亮、canonical 一起切换；文档标题由 htmx 从响应的 <code>&lt;title&gt;</code> 恢复；滚动位置由上面的 <code>afterSettle</code> 归零。</p>
+<p><b>返回落地页的控件</b>是壳里唯一一个 href 指向壳自身的链接，它靠两个属性成立。<code>data-shell</code> 让它在 <code>pushState</code> 之后仍指向站点根（§5.3）——相对写法会指向章节目录，而 §8.2 的引导页<b>不会</b>救它，因为那里只重定向 <code>@</code> 形状的路径。<code>hx-select="#epubsite-content &gt; *"</code> 把它变成一次普通的交换请求：落地页不是片段，它就是壳文档，所以增强导航请求回来的是一整份壳；而 htmx 的选择器交出的是<b>匹配到的节点本身</b>，于是选中 <code>#epubsite-content</code> 会把内容面板套进它自己（重复 id、两个侧边栏），选中它的<b>子节点</b>才是「把面板内容换成落地页」。目的地状态全部由 §5.4 的同一个同步负责：样式、章节 JSON-LD、<code>body</code> 属性、侧边栏高亮、canonical 一起切换；文档标题由 htmx 从响应的 <code>&lt;title&gt;</code> 恢复；滚动位置由上面的 <code>afterSettle</code> 归零。</p>
 
 <h3>5.8 分享</h3>
 
@@ -350,11 +356,11 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <h3>5.10 布局与滚动（I6）</h3>
 
-<p>壳是一个<b>两面板视口</b>：<code>#toc</code> 与 <code>#epub-content</code> 各自滚动，文档本身永不滚动。这组不变量在实现中逐条以缺陷的形式暴露过，所以每条都同时写出它防的是什么。</p>
+<p>壳是一个<b>两面板视口</b>：<code>#epubsite-toc</code> 与 <code>#epubsite-content</code> 各自滚动，文档本身永不滚动。这组不变量在实现中逐条以缺陷的形式暴露过，所以每条都同时写出它防的是什么。</p>
 
 <table>
 <tr><th>构造</th><th>防的是什么</th></tr>
-<tr><td><b>每条承载内容的网格轨道都声明 <code>minmax(0, …)</code></b>：<code>body</code> 的行与列、<code>#frame</code> 的列与行</td><td><code>1fr</code>（以及隐式 <code>auto</code>）轨道的下限是内容，不是 0。于是一章长文会把行撑到章节高度、<code>1fr</code> 没有余量可分、<code>overflow: auto</code> 永不生效，整个页面变成一张三万像素的长纸。<code>minmax(0, …)</code> 两次打断这个循环：轨道就是容器的高度，显式 <code>0</code> 下限让内容无法把它吹大。<b>这一条在四个不同位置各错过一次</b>，最后一次的元凶是工具栏里不换行的 flex 项把列撑到 511px（视口 500px），于是内容区的右内边距——读者的整个右边距——被推到屏幕之外</td></tr>
+<tr><td><b>每条承载内容的网格轨道都声明 <code>minmax(0, …)</code></b>：<code>body</code> 的行与列、<code>#epubsite-frame</code> 的列与行</td><td><code>1fr</code>（以及隐式 <code>auto</code>）轨道的下限是内容，不是 0。于是一章长文会把行撑到章节高度、<code>1fr</code> 没有余量可分、<code>overflow: auto</code> 永不生效，整个页面变成一张三万像素的长纸。<code>minmax(0, …)</code> 两次打断这个循环：轨道就是容器的高度，显式 <code>0</code> 下限让内容无法把它吹大。<b>这一条在四个不同位置各错过一次</b>，最后一次的元凶是工具栏里不换行的 flex 项把列撑到 511px（视口 500px），于是内容区的右内边距——读者的整个右边距——被推到屏幕之外</td></tr>
 <tr><td>每个面板 <code>min-height: 0</code> + 自己的 <code>overflow</code></td><td>网格项的最小尺寸是内容，不声明 <code>0</code> 它就会长大而不是滚动</td></tr>
 <tr><td><code>html</code>/<code>body</code> 用 <code>overflow: clip</code></td><td><code>overflow: hidden</code> <b>仍然是滚动容器</b>：<code>scrollIntoView</code> 与 htmx 的 <code>show:top</code> 依然能滚动它。工具栏正是这样滑到视口上方 51px 处的——滚章节把整个 <code>body</code> 滚了，工具栏跟着走。<code>clip</code> 根本不创建滚动容器</td></tr>
 <tr><td><code>:root</code> 上 <code>overflow-wrap: break-word</code>（可继承）</td><td>CSS 只在空格与连字符处断行，<b>不在 <code>.</code>、<code>_</code>、<code>/</code> 处断</b>。于是 <code>spec.add_development_dependency</code>（侧边栏里的方法名）与 <code>/home/someuser/.local/share/…/example.rb</code>（正文里的路径）都是<b>原子词</b>，固定宽的列对此只有一条出路：长出横向滚动条。用 <code>break-word</code> 而非 <code>anywhere</code>：前者只在原本会溢出时才断，且不改变固有尺寸计算，表格与浮动仍按书的本意度量</td></tr>
@@ -372,13 +378,13 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <p><b>不变量：覆盖层不得盖住开关它的那个控件。</b>抽屉最初占满整个视口高度，于是打开它就盖住了打开它的那个按钮——唯一的出路是刷新页面。修法是几何的，不是加一个控件：抽屉从工具栏<b>下方</b>开始，开关因此始终可点，同一个按钮负责开也负责关。一个控件、一个布尔量，两者不可能互相矛盾。</p>
 
-<p>这要求工具栏的高度<b>精确</b>而非近似，所以 <code>--shell-toolbar-height</code> 声明一次，同时驱动 <code>#toolbar</code> 的 <code>height</code>（配 <code>box-sizing: border-box</code>）与抽屉的 <code>inset-block-start</code>。</p>
+<p>这要求工具栏的高度<b>精确</b>而非近似，所以 <code>--shell-toolbar-height</code> 声明一次，同时驱动 <code>#epubsite-toolbar</code> 的 <code>height</code>（配 <code>box-sizing: border-box</code>）与抽屉的 <code>inset-block-start</code>。</p>
 
 <p>状态放在 <code>&lt;html&gt;</code> 的 <code>data-drawer-open</code> 上：一个属性要同步的东西只有一件，样式表可以在任意断点响应它而 JavaScript 无需知道布局，<code>aria-expanded</code> 可以从它派生而不是另行跟踪。注意 <code>aria-expanded</code> 是<b>字符串</b>：<code>setAttribute(name, false)</code> 会写入字面量 "false"，辅助技术读成<i>已展开</i>，与意图完全相反。</p>
 
 <p><b>验收必须用命中测试。</b><code>toBeVisible()</code> 在被面板盖住的按钮上照样通过。真正的断言是「在按钮中心点做命中测试，结果是这个按钮」——这也正是浏览器在读者点击时做的事。</p>
 
-<p><b>样式陷阱，必须记下：</b>目录开关与其余符号控件共用一组样式，而那组选择器是两个 id 宽（<code>#toolbar #…</code>，为了压过 <code>#toolbar button</code>）。因此 <code>#toc-toggle</code> 的 <code>display: none</code>（宽屏）与窄屏下的 <code>display: inline-flex</code> 也必须写成两个 id，否则它们会<b>输给那一组</b>，开关会在所有宽屏下现形——一个只在把新控件加进那组时才出现的缺陷，与加进去的那行规则看起来毫无关系。</p>
+<p><b>样式陷阱，必须记下：</b>目录开关与其余符号控件共用一组样式，而那组选择器是两个 id 宽（<code>#epubsite-toolbar #…</code>，为了压过 <code>#epubsite-toolbar button</code>）。因此 <code>#epubsite-toc-toggle</code> 的 <code>display: none</code>（宽屏）与窄屏下的 <code>display: inline-flex</code> 也必须写成两个 id，否则它们会<b>输给那一组</b>，开关会在所有宽屏下现形——一个只在把新控件加进那组时才出现的缺陷，与加进去的那行规则看起来毫无关系。<b>前缀不改变这条规则</b>：宽度是两个 id 还是一对 id，与它们叫什么名字无关（§5.13）</p>
 
 <h3>5.12 决策记录：<code>href</code> 会变的链接不能只靠 boost</h3>
 
@@ -391,7 +397,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <table>
 <tr><th>修法</th><th>为什么是这一条</th></tr>
 <tr><td>两个控件标 <code>hx-boost="false"</code></td><td>让 htmx 不再接管它们，而把 <code>href</code> 留给浏览器。这不是放弃：中键、新标签页、复制链接、以及 htmx 从未到达时的降级，靠的都是这个属性——它也是这个控件选 <code>&lt;a&gt;</code> 而不是 <code>&lt;button&gt;</code> 的全部理由</td></tr>
-<tr><td>运行期用 <code>htmx.ajax</code> 发起交换（<code>runtime/pager.ts</code>）</td><td>与入口协议（§8.2）同一个公开 API。<b>路径是参数而不是属性</b>，所以没有任何可被缓存的东西；目标与交换规格与 <code>body</code> 上的 boost 属性逐字一致（<code>#epub-content</code>、<code>innerHTML show:top</code>）</td></tr>
+<tr><td>运行期用 <code>htmx.ajax</code> 发起交换（<code>runtime/pager.ts</code>）</td><td>与入口协议（§8.2）同一个公开 API。<b>路径是参数而不是属性</b>，所以没有任何可被缓存的东西；目标与交换规格与 <code>body</code> 上的 boost 属性逐字一致（<code>#epubsite-content</code>、<code>innerHTML show:top</code>）</td></tr>
 <tr><td>传 <code>push: href</code></td><td>非 boost 元素不会自己压历史，不传就只是地址栏不动。htmx 的 <code>push</code> 收的是<b>要压入的地址</b>而不是布尔量（传 <code>true</code> 会压入字面量 <code>/true</code>——这个坑已经踩过一次，见 <code>Htmx.ajax</code> 的注释）</td></tr>
 <tr><td>传 <code>source</code>（控件本身）</td><td>请求的「来源元素」决定继承属性从哪里解析：<code>hx-indicator</code> 在 <code>&lt;body&gt;</code> 上，不传就变成一次没有「Loading…」的慢请求。它同时让 <code>htmx:beforeRequest</code> 在控件上触发，于是同路径短接对翻页依然生效（正好也是我们想要的：连点两下不会重复请求刚到达的那一章）</td></tr>
 </table>
@@ -401,6 +407,49 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <p><b>三个探测器钉住它，各钉一处：</b>集成测试断言两个控件带 <code>hx-boost="false"</code>（下一次「顺手删掉这个属性」的改动会在这里变红，而且红得清楚）；e2e 用<b>真点击</b>沿 <code>location.pathname</code> 走完 spine 并跨过侧边栏没列出的那一章——这是唯一的「点击真的到了下一章」的证据；两端变灰后仍留在原地、仍可被读到，钉住的是不可用状态而不是导航本身（§13.2）。</p>
 
 ---
+
+<h3>5.13 决策：壳的类名与 id 命名空间</h3>
+
+<p>壳输出的一切类名与 id 都以 <code>epubsite-</code> 开头（§5.1），这不是整理癖。章内容是被交换进壳的<b>同一个文档</b>里的，而书的样式表在章节显示期间也活着（§5.4），于是「壳的选择器」与「书的标记」在同一棵树上求值——两个方向都会出事：</p>
+
+<table>
+<tr><th>方向</th><th>本该发生的</th><th>实际发生的</th></tr>
+<tr><td>书的规则打到壳</td><td>书只该管自己的内容</td><td>书里一句 <code>#toc { display: none }</code> 会让<b>侧边栏消失</b>。更糟的是窄屏：壳自己的 <code>#toc</code> 规则是 <code>position: fixed</code> 的抽屉（§5.11），于是书里一个普通的 <code>&lt;nav id="toc"&gt;</code> 会在读者屏幕上变成一块浮动的覆盖层——书自己的目录被阅读器的样式改造成了阅读器的控件</td></tr>
+<tr><td>壳的规则打到书</td><td>壳只该管自己的 chrome</td><td>壳的 <code>.notice</code> 与 <code>.credit</code> 是落地页自己的类，而书里同样叫 <code>.notice</code> 的告示块会拿到壳的左边框与底色。方向是壳赢，因为壳在更强的层里（§5.5）——所以这不是「书用错了类名」，是<b>壳越界了</b></td></tr>
+</table>
+
+<p>修法只能是换词。加前缀是能做的最小动作：书的规则再也命不中壳，壳的规则再也命不中书，而结构、源序、层序一处不动。</p>
+
+<p><b>四条必须一起记住的细节：</b></p>
+
+<ul>
+<li><b>id 保持 id，不改成 class。</b>符号控件那一组的宽度是两个 id，正是为了压过 <code>#epubsite-toolbar button</code>（id + 类型，§5.11）。换成类选择器会输给它，开关会在所有宽屏下现形——前缀改变的是名字，不是宽度，把 <code>#epubsite-toolbar</code> 写成一个类会静默推翻 §5.11 那条陷阱记录的修法。</li>
+<li><b>裸类型选择器的历史规模不变。</b><code>#epubsite-landmarks h2</code> 与 <code>#epubsite-toc a</code> 仍然是「id + 类型」，与重命名前一样。</li>
+<li><b><code>data-*</code> 标记不动。</b><code>data-shell</code>、<code>data-key</code>、<code>data-toc-branch</code>、<code>data-collapsed</code>、<code>data-drawer-open</code>、<code>data-flash</code> 是属性而非类，书的样式表几乎不可能按它们选择；而 <code>data-shell</code> 是 §5.3 的承重标记，改名的收益是零、风险是漏改一处。</li>
+<li><b>别人的名字一个都不碰。</b><code>.htmx-indicator</code>/<code>.htmx-request</code> 是 htmx 按名字找元素的开关，<code>.pf-modal-close</code> 与 <code>.pagefind-ui__*</code> 属于 Pagefind 组件（§5.9、I7）。前缀规则只管我们输出的名字。</li>
+</ul>
+
+<p><b>这条规则由测试守着，而不是由记忆守着。</b>单元测试读 <code>shell.css</code>，断言其中每一个类与 id 选择器都带前缀；例外白名单里只有上面两个第三方名字，并且要求它们确实出现在文件里——白名单一旦能悄悄加人，它就会变成垃圾桶。集成测试读构建出的壳，断言每个 <code>class</code>/<code>id</code> 属性里的记号都带前缀，并断言壳自己属性中引用的每个 id（<code>hx-target</code>、<code>hx-indicator</code>、<code>hx-select</code>、<code>aria-controls</code>）都真的存在于那份文档里——后者正是重命名最容易漏掉的一处。e2e 里另有一本<b>专门敌对的书</b>：它的样式表写着上面那些通用名字并配 <code>display: none</code>，断言壳的面板、侧边栏与工具栏全都还在；同一份样式表对书自己的元素仍然生效，那是「样式表确实加载了」的对照，没有它，「什么都没被藏起来」也可能只是「什么都没加载」。</p>
+
+<p><b>已知的残留：类型选择器不在这条规则的射程内。</b>书的 <code>nav { display: none }</code> 仍会让侧边栏消失，因为层序只解决<b>冲突</b>，而壳没为 <code>#epubsite-toc</code> 声明过 <code>display</code>（§5.5）。修法是另一条规则——壳为自己 chrome 的每个元素声明决定其布局的属性——与命名无关，因此记进附录 F 的未决项，而不是混进这一条。</p>
+
+<h3>5.14 决策：阅读器自己的内容样式（<code>--content-style</code>）</h3>
+
+<p>默认是 <code>book</code>：书保留自己的样式表，壳按 §5.4 把它们注入 <code>&lt;head&gt;</code>。<code>reader</code> 则相反——书自己的样式表<b>不注入</b>，运行期改为注入阅读器自带的一张排版默认样式表。这是 §1.2 的第二处例外，也是唯一一处由选项开启的例外。</p>
+
+<p><b>它不碰书的文件。</b>零改写（G2、§13.1）说的是站点的条目集合与书的中央目录一致、每个文件字节数相同；换不换样式表是<b>阅读器呈现</b>的事，靠的是不注入，而不是改写。因此 <code>reader</code> 模式下书的内容文件仍然一字未改，直接打开任何章节（裸页面）看到的仍是书自己的排版——那条路径上没有壳，也就没有这张表。</p>
+
+<p><b>它不改变层序。</b>阅读器那张表注入的仍是 <code>@layer epub</code> 里的一个槽位（§5.4、§5.5），因此 §5.10 的布局不变量——面板量度、媒体的 <code>max-width: 100%</code>、I6 的断行——照旧压得住它。这是刻意的边界：读者自己的排版默认值不该有能力撑开侧边栏，或把图顶出列外。</p>
+
+<p><b>替换发生在构建期，运行期只有一个槽位。</b><code>shell-data.json</code> 里 <code>readerStyles</code> 存在时，每章的 <code>headStyles</code> 是三个空数组（A.2）；运行期照旧把「本槽位的样式」注入 <code>&lt;head&gt;</code>，只是内容换成了阅读器那一张。两个好处：运行期没有模式分支，且书的 <code>&lt;style&gt;</code> 正文不再随产物传输。槽位顺序也写下来了——阅读器的表排在书的前面——因为同一个层里后写的赢，于是「默认铺在书之下、由书细化」这种将来可能的模式只需要改构建期一处。</p>
+
+<p><b>回到落地页时它和书的样式一起被移除</b>（§5.4）：落地页用的是壳自己的排版，不该带着一本书的正文样式。</p>
+
+<p><b>无处可用时整个构建失败</b>（退出码 2，§9.2），理由与上一条同源：这张表要由壳来应用，而 <code>--no-spa</code> 与固定版式书（§12）都让章节回到「书自己的文件」这条路上，此时这条选项只能被无视——悄悄产出一个无视了用户明确要求的站点，正是 §9 反复拒绝的那类失败。<b>消息里写清是哪一种情形</b>：一个是用户自己选的（<code>--no-spa</code>），一个是书决定的（<code>rendition:layout=pre-paginated</code>）。</p>
+
+<p><b>它只管样式表，不管书的标记。</b>书里写成 <code>style="…"</code> 的属性、以及 <code>align</code>/<code>bgcolor</code>/<code>width</code> 这类表现型属性是标记的一部分，零改写不允许我们动它们，因此这条选项的承诺精确到「书的样式表不被注入」。代价明说：一本大量使用行内样式的书，在深色主题下仍可能带着自己的颜色。</p>
+
+<p><b>落地页不为此加提示。</b>§12 的落地页提示是给「书逼我们降级」这类情形用的；这条选项是出版方自己的选择，读者不需要被通知。</p>
 
 <h2>6. Head 管理策略 · 决策记录</h2>
 
@@ -566,6 +615,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><td><code>--pagefind &lt;path&gt;</code></td><td>自动发现</td><td>显式指定二进制，覆盖发现顺序</td></tr>
 <tr><td><code>--no-spa</code></td><td>—</td><td>只出多页站点，不注入 htmx</td></tr>
 <tr><td><code>--theme &lt;t&gt;</code></td><td><code>auto</code></td><td><code>auto</code> / <code>light</code> / <code>dark</code>。<code>auto</code> <b>不输出任何属性</b>，让 <code>prefers-color-scheme</code> 决定——输出 <code>data-theme="auto"</code> 会成为样式表要处理的第三个状态，并把选择冻结在加载时刻</td></tr>
+<tr><td><code>--content-style &lt;s&gt;</code></td><td><code>book</code></td><td><code>book</code> / <code>reader</code>。<code>book</code> 是默认：书保留自己的样式表。<code>reader</code> 不注入书的样式表，改用阅读器自带的排版默认（跟随 <code>--theme</code>）。<b>无阅读器可用时退出码 2</b>——<code>--no-spa</code> 或固定版式书下这条选项无处生效（§5.14、§12）</td></tr>
 <tr><td><code>--clean</code> / <code>--force</code></td><td>关</td><td>删除输出目录 / 允许写入非空目录</td></tr>
 <tr><td><code>--dry-run</code></td><td>关</td><td>校验并报告，不写盘</td></tr>
 <tr><td><code>--verbose</code> / <code>--json</code></td><td>关</td><td>详细 stderr / 机器的 stdout 结果</td></tr>
@@ -621,8 +671,8 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <ul>
 <li>侧边栏是带 <code>aria-label</code> 的 <code>&lt;nav&gt;</code>；当前章节用 <code>aria-current="page"</code>，由内容路径的<b>精确键比较</b>得出，而不是比较 href——后者要为需要百分号编码的文件名重建 URL，是一堆等着互相矛盾的边界情况。</li>
-<li>跳过链接指向 <code>#epub-content</code>；SPA 模式下必须带壳文件名（§5.2）。</li>
-<li>焦点在导航后移到 <code>#epub-content</code>，用 <code>preventScroll: true</code>：焦点移动是为了让键盘用户落到新内容上，不是为了滚动。</li>
+<li>跳过链接指向 <code>#epubsite-content</code>；SPA 模式下必须带壳文件名（§5.2）。</li>
+<li>焦点在导航后移到 <code>#epubsite-content</code>，用 <code>preventScroll: true</code>：焦点移动是为了让键盘用户落到新内容上，不是为了滚动。</li>
 <li>内容区 <code>aria-live="polite"</code>。</li>
 <li>锚点用逻辑属性（<code>inset-inline-start</code>）以便 RTL 正确翻转；<code>translateX</code> 没有各浏览器都懂的逻辑等价物，这是唯一使用物理方向的地方，且已注明。</li>
 <li>模态的关闭控件在所有宽度可见（§5.9）；<code>aria-expanded</code> 写字符串而非布尔（§5.11）。</li>
@@ -632,7 +682,9 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <h3>11.2 响应式</h3>
 
-<p>断点 <code>40rem</code>。窄屏下 <code>#toc</code> 变成覆盖式抽屉，工具栏出现开关。<code>prefers-reduced-motion: reduce</code> 下取消抽屉过渡。</p>
+<p>断点 <code>52.5rem</code>（840px；这个数是设备测量而不是口味，推导见 §5.10）。窄屏下 <code>#epubsite-toc</code> 变成覆盖式抽屉，工具栏出现开关。<code>prefers-reduced-motion: reduce</code> 下取消抽屉过渡。</p>
+
+<p><b>主题也管书的内容，但只有在被要求时。</b>默认下书自己的颜色、字体与行高一律保留，<code>--theme</code> 只决定壳的调色板；<code>--content-style reader</code> 时（§5.14）阅读器那张样式表只从 <code>--shell-*</code> 令牌取色，于是内容与 chrome 的明暗不会各说各话。</p>
 
 <h3>11.3 布局不变量（I6 的可操作形式）</h3>
 
@@ -684,6 +736,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><td>宿主机无法落盘的文件名</td><td>末尾空格、Windows 保留设备名。判定<b>不得依赖平台</b>（E.5）</td></tr>
 <tr><td>RTL 书</td><td>只反转<b>呈现层</b>的侧边栏顺序与上一页/下一页这对控件；<code>readingOrder</code> 与 <code>position</code> 保持 spine 序（E.8）。翻页的镜像值得看两眼：箭头在两种方向下都朝外，所以镜子里的排列<b>看起来一样而意义相反</b>——RTL 下左边那枚箭头是「下一页」——这正是对称图形镜像后的样子，只比位置是看不出对错的（§13.2）</td></tr>
 <tr><td>搜索二进制找不到</td><td><code>W_SEARCH_UNAVAILABLE</code>，退出 0，站点完整（§D.3）</td></tr>
+<tr><td><code>--content-style reader</code>，但没有阅读器可用（<code>--no-spa</code>，或书是固定版式而壳被自动降级）</td><td><b>退出码 2</b>，消息指明是哪一种情形（§5.14）。这条选项要靠壳才能生效，而这两种情形都让章节回到「书自己的文件」上；与其产出一个悄悄无视了明确要求的站点，不如报错</td></tr>
 </table>
 
 <h3>12.1 诊断码</h3>
@@ -764,7 +817,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <h2>14. 实施阶段</h2>
 
-<p>P0–P8 全部完成并通过验证（§1.4）。此后附录 F 的六处就地修订（F.10–F.14、F.16）落地，全量验证：类型检查、lint 干净，单元 + 集成 <b>19 个文件 / 353 个测试</b>，端到端 <b>55 个</b>（54 通过，另 1 个是 I1 探针里按设计跳过的 <code>fixme</code>，真实 Chrome）。</p>
+<p>P0–P8 全部完成并通过验证（§1.4）。此后附录 F 的八处就地修订（F.10–F.14、F.16–F.18）落地，全量验证：类型检查、lint 干净，单元 + 集成 <b>20 个文件 / 364 个测试</b>，端到端 <b>61 个</b>（60 通过，另 1 个是 I1 探针里按设计跳过的 <code>fixme</code>，真实 Chrome）。</p>
 
 <table>
 <tr><th>阶段</th><th>内容</th></tr>
@@ -801,6 +854,8 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <p><code>byKey</code> 不能充当那个序列：它含<b>每一个</b> spine 项（包括 <code>linear="no"</code> 的封面与导航文档），而且它的键序是 JSON 序列化的性质，不是契约。</p>
 
+<p>另有一项<b>可选</b>字段 <code>readerStyles</code>：<code>--content-style reader</code> 时才有，内容是阅读器自己的那张样式表（§5.14）。它必须放在这里而不是放进 <code>_epubsite_assets/</code>：运行期要把它当作一个<b>槽位</b>注入与移除（§5.4），而一个文件无法随章节状态来回增减；何况那里的一份副本还得再发一次请求才读得到。同一模式下每章的 <code>headStyles</code> 是三个空数组——构建期已经把「书自己的样式表这次不注入」这件事写在数据里了，运行期不需要自己判断。</p>
+
 ---
 
 <h2>附录 B · 关键流程图汇总</h2>
@@ -812,12 +867,12 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
   → 同章节片段？ → 我们自己执行跳转，不请求（§5.7）
   → XHR 取章节
   → pushState(章节真实 URL)        ← 必须在 swap 之前（I1）
-  → swap #epub-content（innerHTML show:top）
+  → swap #epubsite-content（innerHTML show:top）
   → syncChapter：样式 / body 属性 / 侧边栏高亮 / 标题（§5.4）
 
 点击上一页 / 下一页
   → 不经过 boost（这两个控件的 href 每章都变，boost 只会记住第一次那章）
-  → 运行期读当前 href → preventDefault → htmx.ajax(target #epub-content, push 该 URL)
+  → 运行期读当前 href → preventDefault → htmx.ajax(target #epubsite-content, push 该 URL)
   → 之后的流程与上面完全相同（同一套 swap 与 syncChapter）</code></pre>
 
 <h3>B.2 令牌入口</h3>
@@ -970,7 +1025,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <table>
 <tr><th>#</th><th>修订</th><th>理由</th></tr>
-<tr><td>F.1</td><td><b>新增 I6：文档永不滚动，滚动是面板各自的职责</b>（§2、§5.10、§11.3）</td><td>v1.2 通篇没有一句关于布局的话，而实现中四个独立缺陷全部源自同一条被忽略的 CSS 规则：<code>1fr</code> 轨道的下限是<b>内容</b>而非 0。同一类错误在四处各犯一次（<code>body</code> 的行、<code>body</code> 的列、<code>#frame</code> 的列、窄屏的列），其中最后一次的元凶是工具栏里不换行的 flex 项。规则本身是抽象的（「每条承载内容的轨道都声明 <code>minmax(0, …)</code>」），而它的四个实例是具体的，因此两者都写进规范</td></tr>
+<tr><td>F.1</td><td><b>新增 I6：文档永不滚动，滚动是面板各自的职责</b>（§2、§5.10、§11.3）</td><td>v1.2 通篇没有一句关于布局的话，而实现中四个独立缺陷全部源自同一条被忽略的 CSS 规则：<code>1fr</code> 轨道的下限是<b>内容</b>而非 0。同一类错误在四处各犯一次（<code>body</code> 的行、<code>body</code> 的列、<code>#epubsite-frame</code> 的列、窄屏的列），其中最后一次的元凶是工具栏里不换行的 flex 项。规则本身是抽象的（「每条承载内容的轨道都声明 <code>minmax(0, …)</code>」），而它的四个实例是具体的，因此两者都写进规范</td></tr>
 <tr><td>F.2</td><td><b>新增 I7：第三方组件的内部状态由其 API 独占</b>（§2、§5.9）</td><td>直接对 Pagefind 模态内部的 <code>&lt;dialog&gt;</code> 调 <code>showModal()</code>，会打开对话框却让组件的 <code>_isOpen</code> 仍为 <code>false</code>，于是<b>组件自己渲染的关闭按钮点击后毫无反应</b>。这不是配置错误，是绕过封装的必然结果：组件用它自己的状态推断该做什么，我们让那个状态说了谎</td></tr>
 <tr><td>F.3</td><td><b>新增 I2 的适用范围</b>：凡会被「重新解析」的壳 URL 都算（§2.2、§5.3）</td><td>I2 原先读起来像「链接要绝对化」。favicon 是反例：它不是链接、没人点它，但浏览器在文档 URL 变化后会按当前基准<b>重新解析</b>它的 <code>href</code>，于是相对写法在导航后请求 <code>/OEBPS/text/_epubsite_assets/icon.svg</code> 而 404——并且静默，因为 favicon 404 只表现为图标不显示。规则按「会不会重解析」判，样式表因此被正当地豁免</td></tr>
 <tr><td>F.4</td><td><b>新增 §5.11 窄屏抽屉</b>，含不变量「覆盖层不得盖住开关它的控件」</td><td>抽屉原本占满视口高度，打开即盖住打开它的按钮，唯一出路是刷新。修法是几何的（抽屉从工具栏下方开始）而不是加一个关闭按钮：一个控件、一个布尔量，不可能互相矛盾。连带的构造要求是工具栏高度由一个令牌精确决定（§5.10）</td></tr>
@@ -980,11 +1035,13 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><td>F.8</td><td>术语表补入「面板」「不可断令牌」「降级」；§1.2 补入「不为内容重新排版」及其唯一例外</td><td>I6 要求断行，而断行是壳对书内容的唯一一处呈现干预。不写明例外，§1.2 的承诺就会与 §5.10 的实施相矛盾</td></tr>
 <tr><td>F.9</td><td><b>章节 <code>url</code> 改为数组，运行期并入真实地址与令牌地址</b>（§5.8、§7.3、§7.5、§8.5、§9）</td><td>v1.2 与 v1.3 都写了「令牌路径在整个系统里的唯一用途是剪贴板」。这条断言被一个具体需求推翻：只给真实地址时，抓取器要么索引裸页面（可读，但没有阅读器），要么根本看不到章节节点。列两个地址等于说「这一章在这两个地址都能到达」，这是真的。它要求把两句话分开——canonical（仍否决）与 <code>url</code> 列表项（采纳）——并要求运行期承担这个字段，因为「站点此刻被打在哪个源下」构建期无从得知（G7）。顺带修掉一处构造缺陷：构建期写 <code>url</code> 时直接用 zip 里的条目名，含空格的书会写出一个带空格的「URL」，而运行期写的是浏览器形态；同一个地址两种拼法使「已有则跳过」失效，地址被列两遍。改法是构建期按 URL 规则编码，运行期按规范形态比较。<b>这也是首次出现「必须原地改写既有章节」的情况，理由记在文首</b></td></tr>
 <tr><td>F.10</td><td><b>canonical 只属于落地页：进入章节时移除，回到落地页时恢复</b>（§4.6、§5.4、§5.6、§7.5、§8.5、§9）</td><td>canonical 此前是壳 <code>&lt;head&gt;</code> 里的静态标签，因此在阅读器里<b>永远</b>存在——而它断言的是「本文档住在这里」。读者进入章节之后这句话是假的，且是后果最重的一句假话：它告诉爬虫每一章都是落地页的副本。修法不是在构建期少写一个标签（那样落地页也失去了它），而是承认它是一个<b>槽位</b>：由 §5.4 的同一个同步切换，标签带 <code>data-epub-canonical</code> 让运行期找得到它。恢复时保留<b>原节点</b>并插回它当时的前一个后继兄弟之前，而不是重新创建后追加——否则 <code>&lt;head&gt;</code> 的结构会随运行期槽位的增减而漂移。<b>章节不写 canonical，连真实地址也不写</b>：读者是壳，替章节声明它住哪里不是它该做的事。同时删去一处从未兑现的旧陈述：<code>og:image</code> 从来没有被实现过</td></tr>
-<tr><td>F.11</td><td><b>工具栏新增「首页」控件，目录开关改为符号</b>（§5.1、§5.7、§5.11、§11.1）</td><td>两点合成一条，因为它们是同一个问题：工具栏此前没有任何回到落地页的路径（只能按「后退」），而那个唯一带文字的控件恰好在最窄的屏幕上最重要。首页控件是<b>链接</b>而不是按钮——它是导航，中键与新标签页都该照常工作——因此靠两个属性成立：<code>data-shell</code> 让它在 <code>pushState</code> 之后仍指向站点根，<code>hx-select="#epub-content &gt; *"</code> 让「请求壳」变成「把面板内容换成落地页」。后者是承重的：增强导航请求回来的是一整份壳，而 htmx 的 <code>hx-select</code> 交出的是<b>匹配到的节点本身</b>，选中 <code>#epub-content</code> 会把面板套进它自己（重复 id、两个侧边栏）。目录开关去掉文字之后可及名称只剩 <code>aria-label</code>；连带的样式陷阱也记进 §5.11：符号控件的样式组是两个 id 宽，<code>#toc-toggle</code> 的显隐规则若仍写一个 id 就会输给它，开关将在所有宽屏下现形</td></tr>
-<tr><td>F.12</td><td><b>落地页末尾加入对本项目的致谢行</b>（§4.6、§5.1、§11.1、§13.2）</td><td>它写在 <code>#epub-content</code> 里面，因此<b>只属于落地页</b>：章节打开时面板被整体替换，致谢随之消失，首页控件把落地页换回来时它一并回来；深链入口从未显示它。这是刻意选的，不是将就——把致谢固定在视口底部（<code>#frame</code> 的第三行）会让 §5.10 那句「每条承载内容的网格轨道都声明 <code>minmax(0, …)</code>」自相矛盾，因为工具栏那一行本来就已经是 <code>auto</code>；那意味着额外一次措辞收紧与一组布局探测器的重新标定，换一行代码不值得。链接是真正的锚点：<code>target="_blank"</code> 配 <code>rel="noopener noreferrer"</code>，并按 §5.7 标 <code>hx-boost="false"</code>。实测 htmx 本来也不会接管它——<code>isLocalLink</code> 比较主机名，且 <code>boostElement</code> 要求 <code>target</code> 为空或 <code>_self</code>——但把结论写出来比让它靠推断成立更好。验收用<b>真点击</b>（context 级路由桩住 github.com，断言弹窗落在仓库地址），因为被 boost 吃掉的跨源链接与能用的链接看起来完全一样。URL 是渲染器里的一个常量，不从 <code>package.json</code> 读：<code>render/</code> 不碰文件系统，<code>readPackageVersion()</code> 保持 CLI 专属。同一条决定下<b>没有</b>提供关闭开关，若出版商日后要求，再加 <code>--no-credit</code> 并记进未决项</td></tr>
+<tr><td>F.11</td><td><b>工具栏新增「首页」控件，目录开关改为符号</b>（§5.1、§5.7、§5.11、§11.1）</td><td>两点合成一条，因为它们是同一个问题：工具栏此前没有任何回到落地页的路径（只能按「后退」），而那个唯一带文字的控件恰好在最窄的屏幕上最重要。首页控件是<b>链接</b>而不是按钮——它是导航，中键与新标签页都该照常工作——因此靠两个属性成立：<code>data-shell</code> 让它在 <code>pushState</code> 之后仍指向站点根，<code>hx-select="#epubsite-content &gt; *"</code> 让「请求壳」变成「把面板内容换成落地页」。后者是承重的：增强导航请求回来的是一整份壳，而 htmx 的 <code>hx-select</code> 交出的是<b>匹配到的节点本身</b>，选中 <code>#epubsite-content</code> 会把面板套进它自己（重复 id、两个侧边栏）。目录开关去掉文字之后可及名称只剩 <code>aria-label</code>；连带的样式陷阱也记进 §5.11：符号控件的样式组是两个 id 宽，<code>#epubsite-toc-toggle</code> 的显隐规则若仍写一个 id 就会输给它，开关将在所有宽屏下现形</td></tr>
+<tr><td>F.12</td><td><b>落地页末尾加入对本项目的致谢行</b>（§4.6、§5.1、§11.1、§13.2）</td><td>它写在 <code>#epubsite-content</code> 里面，因此<b>只属于落地页</b>：章节打开时面板被整体替换，致谢随之消失，首页控件把落地页换回来时它一并回来；深链入口从未显示它。这是刻意选的，不是将就——把致谢固定在视口底部（<code>#epubsite-frame</code> 的第三行）会让 §5.10 那句「每条承载内容的网格轨道都声明 <code>minmax(0, …)</code>」自相矛盾，因为工具栏那一行本来就已经是 <code>auto</code>；那意味着额外一次措辞收紧与一组布局探测器的重新标定，换一行代码不值得。链接是真正的锚点：<code>target="_blank"</code> 配 <code>rel="noopener noreferrer"</code>，并按 §5.7 标 <code>hx-boost="false"</code>。实测 htmx 本来也不会接管它——<code>isLocalLink</code> 比较主机名，且 <code>boostElement</code> 要求 <code>target</code> 为空或 <code>_self</code>——但把结论写出来比让它靠推断成立更好。验收用<b>真点击</b>（context 级路由桩住 github.com，断言弹窗落在仓库地址），因为被 boost 吃掉的跨源链接与能用的链接看起来完全一样。URL 是渲染器里的一个常量，不从 <code>package.json</code> 读：<code>render/</code> 不碰文件系统，<code>readPackageVersion()</code> 保持 CLI 专属。同一条决定下<b>没有</b>提供关闭开关，若出版商日后要求，再加 <code>--no-credit</code> 并记进未决项</td></tr>
 <tr><td>F.13</td><td><b>工具栏新增按 spine 阅读顺序翻页的上/下一页</b>（§5.1、§5.4、§5.7、§7.5、§12、§13.2、A.2）</td><td>读这本书此前只有两条路：侧边栏，或者后退。翻页走的是<b>阅读序列而非侧边栏</b>，两者本来就不同（§7.5、E.11）：侧边栏展示书自己的目录，翻页走 <code>linear</code> spine 项——与 <code>publication.json</code> 的 <code>readingOrder</code> 同一份列表，因此构建期把它抽成一个函数（<code>readingOrder()</code>）供两边使用，两个产物不可能对「第二章之后是什么」有不同看法；运行期则把它放进 <code>shell-data.json</code>（<code>byKey</code> 含所有 spine 项且键序无契约，不能充当序列）。查找只有一条规则：找不到当前位置就当作「在序列之前」，于是落地页、未知路径与 <code>linear="no"</code> 的文档全部得到同一个结果——后退无处可去，「下一页」指向第一章，无需任何特例。两端无目标时控件变灰留在原地（去掉 <code>href</code>，保留 <code>role=link</code> 与 Tab 停靠）。<b>实现上最值得记住的一条坑：这两个控件不能只靠 boost</b>——<code>boostElement</code> 在处理节点时读一次 <code>href</code> 并闭包住它，而它们的 href 每章都变，于是点击请求的是首次被处理时那一章，又被同路径短接取消，<b>什么也不发生且无任何报错</b>。完整的失败机制、修法的四条理由与推广规则记在 <b>§5.12</b>；这里只留结论：标 <code>hx-boost="false"</code>，交换由运行期用 <code>htmx.ajax</code> 发起，<code>href</code> 留给浏览器。RTL 下这对控件按 §12 镜像，而镜像的呈现恰好与 LTR 一样（箭头在两种方向下都朝外），所以规范里写明：只比位置看不出对错</td></tr>
 <tr><td>F.14</td><td><b>工具栏溢出时横向可滚</b>（§5.10、§11.3、§13.2）</td><td>控件尺寸用 <code>rem</code>，所以「手机宽度 + 大号默认字体」会让一整行超出容器；此时书名早已缩到 0，flex 行只能溢出，而 <code>body</code> 是 <code>overflow: clip</code>，于是最右边的控件被<b>永久藏起来</b>——抽屉那个缺陷的另一个翻版（「画在容器之外就是够不着」）。修法就是让它滚：<code>overflow-x: auto</code> 配一条细滚动条，块轴保持一行不滚。两处代价必须记账：滚动条与控件抢的正是 <code>--shell-toolbar-height</code> 那点余量，所以块内边距从 0.5rem 收到 0.375rem；<code>overflow-y: clip</code> 在这种组合下会被引擎算成 <code>hidden</code>（实测），规范因此写 <code>hidden</code> 并在 §5.10 说明为什么它在这里是安全的</td></tr>
 <tr><td>F.16</td><td><b><code>@id</code> 照抄 <code>dc:identifier</code>，没有标识符时用标题的 slug；删掉 <code>W_IDENTIFIER_UNPARSEABLE</code></b>（§7.4、§7.5、§7.7、§12、§12.1）</td><td>旧规则把「不是 URN/ISBN/UUID/URL」的标识符取文本 SHA-256 前 16 位、装进自造的 <code>urn:epubsite:</code>，并发警告说「改文本即改身份」。它想要的是让 <code>@id</code> 保持合法 IRI，代价却是把身份从书手里拿走：五本 IDPF 样本里有四本的标识符不是 URN，于是四本书的身份都由我们计算，而 G7 要的恰好是身份来自书。本版把规则与警告一起删掉——<b>照抄</b>，例外只有两个：裸 ISBN 与裸 UUID 补前缀，因为补前缀无损、且让一个裸数字不再有歧义。顺带补上一个更旧的缺口：<code>identifier</code> 原先只写「第二条非 ISBN 标识符」，于是标识符不是 ISBN 的书一个 <code>identifier</code> 都没有——那正是四本样本的样子；现在它取<b>被选中</b>的那一条（§4.2），而同一数值仍不会同时落进 <code>isbn</code> 与 <code>identifier</code>。空标识符归入「没有标识符」：「没有」是事实，<code>@id: ""</code> 是假装有。标题替代者的 slug 规则也写进 §7.4，其中 <code>\p{M}</code>（分解形里的重音是组合记号）与不随区域设置变化的小写各对应一个会静默出错的细节。<b>E.13 的 URL 特例被本条吸收</b>：此后没有「URL 是特例」这回事，URL 只是照抄的一种。§12.1 的清单因此少一项，而它依旧被声明为完整清单</td></tr>
+<tr><td>F.17</td><td><b>新增 <code>--content-style book|reader</code>：阅读器可以完全不使用书的样式表</b>（§1.2、§5.4、§5.5、§5.14、§9、§11.2、§12、A.2）</td><td>本版之前有一个具体缺口，而不是一个理论缺口：<code>--theme</code> 只决定壳自己的调色板，书的正文则是书说了算——一本写死黑字白底的书，在深色主题下得到的是「深色外壳包着一张白纸」。填法不是给内容强加颜色（那会与 §1.2 冲突到底），而是承认有些出版商要的正是「用阅读器的排版」。于是新增一条选项，值为 <code>reader</code> 时：构建期不再把书的样式表写进 <code>shell-data.json</code>（每章的 <code>headStyles</code> 变成三个空数组，附带好处是书的 <code>&lt;style&gt;</code> 正文不再随产物传输），改为捬上一张阅读器自带的排版默认（<code>src/runtime/reader.css</code>）；运行期照旧往同一个槽位里注入，只是内容换了一张——因此运行期没有模式分支，层序也不变（§5.5：它仍在 <code>@layer epub</code>，仍输给 §5.10 的布局不变量）。三处实现细节各有理由：只做排版不做装饰，颜色一律从 <code>--shell-*</code> 令牌取（否则暗色主题下会出现第二套颜色在漂移）；所有选择器限定在内容区，因为这张表活着的时候侧边栏与工具栏也在同一个文档里；<code>pre</code> <b>不给</b> <code>overflow</code>，那是 F.14 已经量过的一条结论。承诺的边界也写明：它管的是<b>样式表</b>，书标记里的 <code>style="…"</code> 与 <code>align</code>/<code>bgcolor</code> 仍然是标记，零改写不允许我们动它们。无处生效时（<code>--no-spa</code>、固定版式书）退出码 2 并说明是哪一种——一张只能由壳应用的样式表，在没有壳时只能被无视，而这正是 §9 一直拒绝的那类失败。落地页不加提示：这是出版方自己的选择，不是书逼我们降级</td></tr>
+<tr><td>F.18</td><td><b>壳的类名与 id 一律加 <code>epubsite-</code> 前缀</b>（§5.1、§5.10、§5.11、§5.12、<b>§5.13</b>、§11.1、§11.2）</td><td>书的内容被交换进壳的<b>同一个文档</b>，书的样式表在章节显示期间也活着，于是「壳的选择器」与「书的标记」在同一棵树上求值，两个方向都会出事。方向一（书的规则打到壳）有一个具体到可以复述的后果：窄屏下壳自己的 <code>#toc</code> 规则是 <code>position: fixed</code> 的抽屉，因此书里一个普通的 <code>&lt;nav id="toc"&gt;</code> 会变成一块浮动的覆盖层——书自己的目录被阅读器的样式改造成了阅读器的控件；同一条规则还会让侧边栏本身消失。方向二（壳的规则打到书）是方向一的反面，而且更容易被忽略：壳在更强的层里（§5.5），所以书里同样叫 <code>.notice</code> 的告示块会拿到壳的左边框与底色——这不是书用错了名字，是壳越界了。修法只能是换词：加前缀，结构与层序一处不动。<b>两条容易被顺手做错的细节写进了 §5.13</b>：id 必须保持 id（符号控件那一组的宽度是两个 id，换成类选择器会输给 <code>#epubsite-toolbar button</code>，静默推翻 §5.11 那条陷阱记录的修法）；<code>data-*</code> 标记与第三方类名（<code>.htmx-indicator</code>、<code>.pf-modal-close</code>、<code>.pagefind-ui__*</code>）一律不碰。规则由测试守着：单元测试读 <code>shell.css</code> 断言每个类/id 选择器都带前缀（白名单只有那两个第三方名字，且要求它们确实出现，免得白名单变成垃圾桶），集成测试断言构建出的壳里每个 id/class 记号都带前缀、且壳自己属性里引用的 id 都真实存在——后者正是重命名最容易漏的一处。e2e 增加一本专门敌对的书（样式表把上面这些通用名字配 <code>display: none</code>），断言壳的面板、侧边栏、工具栏全都还在；同一份样式表对书自己的元素仍然生效，作为「确实加载了」的对照。顺带修掉一处与本题无关但同样会误导人的旧陈述：§11.2 写的断点 <code>40rem</code> 早已不是实现里的值（实现是 <code>52.5rem</code>，推导见 §5.10）。附录 F 里先前几行引用的壳选择器也一并改成了当前名字——它们描述的元素都还在，留着旧名只会让人按图索骥地扑空</td></tr>
 </table>
 
 <h3>F.15 未决项</h3>
@@ -996,6 +1053,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><td>书的代码块设了 <code>white-space: pre</code> 时</td><td>长行仍会产生横向滚动条。当前有意不动它：那需要把书的内容改成 <code>pre-wrap</code>，属于 §1.2 所限制的呈现干预，而「一条被包住的滚动条」是可接受的代价。<b>若要改，是一行</b>，但应当是明确的产品决定而非默认行为</td></tr>
 <tr><td>路径穿透的最终防线归属</td><td>委托给解包库（yauzl 的 <code>validateFileName</code>），以测试钉住而非再加一道永远跑不到的守卫。换解包库必须重新验证这两条断言</td></tr>
 <tr><td>搜索索引规模</td><td>无裁剪策略（D.6）。对超大书，索引体积随正文线性增长</td></tr>
+<tr><td>类型选择器打到壳的那一半（命名空间管不到）</td><td>书的 <code>nav { display: none }</code> 仍会让侧边栏消失：层序只解决<b>冲突</b>，而壳没为 <code>#epubsite-toc</code> 这类元素声明过 <code>display</code>（§5.5、§5.13）。修法是把 §5.10 那条规则推到每个 chrome 元素上——「决定壳自身布局的属性，壳必须自己声明」——但那是一次逐元素的测量与声明清单，与命名无关，因此留在这里而不是混进 F.18</td></tr>
 </table>
 
 <div align="center">

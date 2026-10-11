@@ -41,7 +41,7 @@ import { render } from './render/escape'
 import { emptyDiagnostics, warn, type Diagnostics } from './diagnostics'
 import { runtimeAsset, vendorAsset } from './assets/paths'
 import { stableStringify } from './determinism'
-import { EncryptedContentError, InvalidEpubError } from './errors'
+import { EncryptedContentError, InvalidEpubError, UsageError } from './errors'
 import { resolveOptions, type BuildOptions } from './options'
 import { RESERVED_PATHS, SHELL_ASSETS, collidesWithReserved, toEntryPath, type EntryPath } from '../shared/paths'
 
@@ -166,6 +166,22 @@ async function runBuild(
     )
   }
 
+  // `--content-style reader` is the *reader's* act: the shell is what applies the
+  // stylesheet, so without a shell the flag could only be ignored. Both ways of
+  // losing the shell are refused here, in one condition with one message shape,
+  // rather than in two places that could drift apart (the parser cannot know
+  // about pre-pagination, and this cannot be a usage error at parse time).
+  if (options.contentStyle === 'reader' && !spa) {
+    throw new UsageError(
+      fixedLayout
+        ? '--content-style reader needs the reader, and this book is pre-paginated ' +
+          '(rendition:layout=pre-paginated), so the shell is dropped and each chapter is ' +
+          'the book’s own page (§12)'
+        : '--content-style reader needs the reader, and --no-spa leaves none: chapters ' +
+          'are the book’s own pages, which keep the book’s own styles',
+    )
+  }
+
   const entryPaths = archive.entries.map((entry) => entry.entryPath)
 
   // §3.2. The shell's own name is the one reserved path that `--name` moves, so
@@ -258,6 +274,7 @@ async function runBuild(
             baseUrl: options.baseUrl,
             shellName: options.name,
             structured,
+            readerStyles: await readerStyles(options),
           }),
         ),
       },
@@ -354,6 +371,30 @@ const HEAD_PARSE_CONCURRENCY = 8
 
 /** The compiled IIFE form of `src/shared/token.ts` (§C.4.2). */
 const TOKEN_IIFE_ASSET = 'token-iife.js'
+
+/**
+ * The reader's own stylesheet for book content (§5.5).
+ *
+ * A package asset, not a site asset: unlike `shell.css` it is never published to
+ * `_epubsite_assets/`. The build embeds its *text* in `shell-data.json`, because
+ * the runtime injects it as a `<style>` slot and removes it again when the reader
+ * returns to the landing page — so a file on the site would be a second copy
+ * nobody fetches.
+ */
+const READER_CSS_ASSET = 'reader.css'
+
+/**
+ * The sheet to embed, or `undefined` when the book's own styles are in force.
+ *
+ * Returning `undefined` rather than an empty string keeps the distinction
+ * visible in the payload: an absent field means "the book styles its own
+ * content", which is not the same statement as "here is a stylesheet that
+ * happens to be empty".
+ */
+async function readerStyles(options: BuildOptions): Promise<string | undefined> {
+  if (options.contentStyle !== 'reader') return undefined
+  return readFile(runtimeAsset(READER_CSS_ASSET), 'utf8')
+}
 
 /**
  * What goes in `.epubsite-root`.

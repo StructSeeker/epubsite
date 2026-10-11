@@ -130,7 +130,7 @@ async function start(): Promise<void> {
       // in `wireNavigation` would cancel the very request that gets us there.
       entryInFlight = true
       await htmx.ajax('GET', entryRequestUrl(SITE_ROOT, entry), {
-        target: '#epub-content',
+        target: '#epubsite-content',
         swap: 'innerHTML show:top',
         push: false,
       })
@@ -241,7 +241,7 @@ function wireNavigation(): void {
       return
     }
 
-    const pane = document.getElementById('epub-content')
+    const pane = document.getElementById('epubsite-content')
     if (pane !== null) pane.scrollTop = 0
   })
 }
@@ -255,7 +255,7 @@ function wireNavigation(): void {
  * fighting the scroll position the navigation settles on.
  */
 function focusContent(): void {
-  document.getElementById('epub-content')?.focus({ preventScroll: true })
+  document.getElementById('epubsite-content')?.focus({ preventScroll: true })
 }
 
 function scrollToFragment(): void {

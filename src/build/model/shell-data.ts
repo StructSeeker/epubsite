@@ -78,6 +78,15 @@ export interface ShellData {
    */
   readingOrder: EntryPath[]
   nav: NavItem[]
+  /**
+   * The reader's own stylesheet for book content, when `--content-style reader`
+   * asked for it (§5.5). The runtime injects it in place of the chapter's own
+   * sheets, so it is the *text* that travels, not a URL.
+   *
+   * Absent means the book styles itself — a different statement from an empty
+   * string, which is why this is optional rather than defaulted.
+   */
+  readerStyles?: string
 }
 export interface ShellDataInput {
   model: BookModel
@@ -86,6 +95,8 @@ export interface ShellDataInput {
   baseUrl: BaseUrl
   shellName: string
   structured: StructuredData
+  /** See {@link ShellData.readerStyles}. */
+  readerStyles?: string
 }
 
 /**
@@ -113,11 +124,22 @@ export function buildShellData(input: ShellDataInput): ShellData {
       bodyClass: head?.bodyClass ?? '',
       dir: head?.dir ?? null,
       lang: head?.lang ?? null,
-      headStyles: {
-        links: (head?.links ?? []).map(serializeStyleRef),
-        imports: (head?.imports ?? []).map(serializeStyleRef),
-        inline: [...(head?.inline ?? [])],
-      },
+      // One decision, made in one place: when the reader supplies the stylesheet,
+      // it *replaces* the book's rather than layering under it, and the payload
+      // says what the reader will actually do with the chapter (A.2 — this file
+      // is rendering instructions, not a record of the book). The book's inline
+      // `<style>` bodies therefore stop travelling to the client at all.
+      //
+      // `bodyClass`, `dir` and `lang` above are untouched: they are markup, not
+      // styling, and a body class is inert once the sheet that used it is gone.
+      headStyles:
+        input.readerStyles === undefined
+          ? {
+              links: (head?.links ?? []).map(serializeStyleRef),
+              imports: (head?.imports ?? []).map(serializeStyleRef),
+              inline: [...(head?.inline ?? [])],
+            }
+          : { links: [], imports: [], inline: [] },
       ...(jsonld === undefined ? {} : { jsonld: withContext(jsonld) }),
     }
   }
@@ -132,6 +154,7 @@ export function buildShellData(input: ShellDataInput): ShellData {
     byKey,
     readingOrder: readingOrder(model).map((chapter) => chapter.entryPath),
     nav: toNavItems(presentationNav(model.nav.toc, model.progression)),
+    ...(input.readerStyles === undefined ? {} : { readerStyles: input.readerStyles }),
   }
 }
 

@@ -148,18 +148,18 @@ test('a chapter opens from the sidebar without reloading the document', async ({
   // The identity of the sidebar node is the whole reason `hx-target` overrides
   // boost's default: capture the element and prove it survived.
   await page.evaluate(() => {
-    ;(window as unknown as { __toc: Element | null }).__toc = document.getElementById('toc')
+    ;(window as unknown as { __toc: Element | null }).__toc = document.getElementById('epubsite-toc')
   })
 
-  await page.click('#toc a[data-key="OEBPS/text/deep/ch03.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('Two')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/deep/ch03.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('Two')
 
   const state = await page.evaluate(() => {
     const w = window as unknown as { __toc: Element | null }
     return {
       url: location.pathname,
-      sidebarSame: w.__toc === document.getElementById('toc'),
-      current: document.querySelector('#toc [aria-current="page"]')?.textContent ?? null,
+      sidebarSame: w.__toc === document.getElementById('epubsite-toc'),
+      current: document.querySelector('#epubsite-toc [aria-current="page"]')?.textContent ?? null,
     }
   })
 
@@ -180,31 +180,31 @@ test('the home control returns to the landing page in place (§5.7)', async ({ p
   // same URL and shows the same heading, so only a value that survives in the
   // document can tell the two apart. The sidebar's node is the second: it must
   // still be the same element afterwards, which is only true if the response was
-  // reduced to `#epub-content`'s children. Swapping in the whole shell body — what
-  // a boosted request without `hx-select` does — would nest a second `#frame` and
-  // a second `#toc` inside the pane, and `#toc` would be a different element.
+  // reduced to `#epubsite-content`'s children. Swapping in the whole shell body — what
+  // a boosted request without `hx-select` does — would nest a second `#epubsite-frame` and
+  // a second `#epubsite-toc` inside the pane, and both would be different elements.
   await page.evaluate(() => {
     const w = window as unknown as { __alive?: boolean; __toc: Element | null }
     w.__alive = true
-    w.__toc = document.getElementById('toc')
+    w.__toc = document.getElementById('epubsite-toc')
   })
 
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
   await expect(page).toHaveTitle('One')
   expect(new URL(page.url()).pathname).toBe('/OEBPS/text/ch01.xhtml')
 
-  await page.click('#home')
-  await expect(page.locator('#epub-content h1')).toHaveText('Sample Book')
+  await page.click('#epubsite-home')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('Sample Book')
 
   const state = await page.evaluate(() => {
     const w = window as unknown as { __alive?: boolean; __toc: Element | null }
     return {
       path: location.pathname,
       alive: w.__alive,
-      sidebarSame: w.__toc === document.getElementById('toc'),
+      sidebarSame: w.__toc === document.getElementById('epubsite-toc'),
       chapterNode: document.querySelectorAll('[data-epub-ld]').length,
-      current: document.querySelector('#toc [aria-current]')?.textContent ?? null,
+      current: document.querySelector('#epubsite-toc [aria-current]')?.textContent ?? null,
     }
   })
 
@@ -234,7 +234,7 @@ test('the landing page credits the project, and a chapter does not (§5.1)', asy
   )
 
   await ready(page)
-  const credit = page.locator('#epub-content .credit')
+  const credit = page.locator('#epubsite-content .epubsite-credit')
   await expect(credit).toBeVisible()
   expect((await credit.innerText()).trim()).toBe('Built with epubsite')
 
@@ -250,13 +250,13 @@ test('the landing page credits the project, and a chapter does not (§5.1)', asy
   expect(popup.url()).toBe('https://github.com/StructSeeker/epubsite')
 
   // The credit belongs to the landing markup, so a chapter takes it away…
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
   await expect(credit).toHaveCount(0)
 
   // …and the home control brings the landing page back, credit and all.
-  await page.click('#home')
-  await expect(page.locator('#epub-content h1')).toHaveText('Sample Book')
+  await page.click('#epubsite-home')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('Sample Book')
   await expect(credit).toBeVisible()
   expect(failures).toEqual([])
 })
@@ -266,8 +266,8 @@ test('the toolbar pages through the spine reading order (§5.7, §7.5)', async (
   await ready(page)
 
   const path = (): string => new URL(page.url()).pathname
-  const prev = page.locator('#prev')
-  const next = page.locator('#next')
+  const prev = page.locator('#epubsite-prev')
+  const next = page.locator('#epubsite-next')
 
   // The landing page stands *before* the reading order: there is nothing to go
   // back to, and "next" is how a reader starts the book without the sidebar.
@@ -278,7 +278,7 @@ test('the toolbar pages through the spine reading order (§5.7, §7.5)', async (
   )
 
   await next.click()
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
   // Polled rather than read once: `click()` resolves when the click is dispatched,
   // not when the swap it triggers has settled, so a plain `expect(path())` is a
   // race that passes or fails on machine speed.
@@ -289,7 +289,7 @@ test('the toolbar pages through the spine reading order (§5.7, §7.5)', async (
   // pager follows the spine: this is the assertion that separates "reading order"
   // from "what the sidebar lists".
   await next.click()
-  await expect(page.locator('#epub-content h1')).toHaveText('Chapter 2')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('Chapter 2')
   await expect.poll(path).toBe('/OEBPS/text/ch02.xhtml')
   await expect(prev).toHaveAttribute('href', /OEBPS\/text\/ch01\.xhtml$/)
 
@@ -306,7 +306,7 @@ test('the toolbar pages through the spine reading order (§5.7, §7.5)', async (
   await prev.click()
   await expect.poll(path).toBe('/OEBPS/text/ch02.xhtml')
   await prev.click()
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
   await expect.poll(path).toBe('/OEBPS/text/ch01.xhtml')
   await expect(prev).toHaveAttribute('aria-disabled', 'true')
   expect(failures).toEqual([])
@@ -318,10 +318,10 @@ test('a chapter’s relative images resolve after the base moved', async ({ page
   // path only resolves if the document base really moved (§13.2).
   await page.goto(`${baseURL}/OEBPS/text/deep/ch03.xhtml`)
   await page.goto(`${baseURL}/epubsite.html`)
-  await page.click('#toc a[data-key="OEBPS/text/deep/ch03.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('Two')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/deep/ch03.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('Two')
 
-  const image = page.locator('#epub-content img')
+  const image = page.locator('#epubsite-content img')
   // `loading="lazy"` means the browser does not even ask until it is near the
   // viewport, so a 404-only check would pass while the image never loads — the
   // §13.2 case says as much.
@@ -332,8 +332,8 @@ test('a chapter’s relative images resolve after the base moved', async ({ page
 
 test('a chapter script does not execute (§10 measure 1)', async ({ page }) => {
   await page.goto(`${baseURL}/epubsite.html`)
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
 
   // Asserting the *behaviour*, not `htmx.config.allowScriptTags`: the ESM build
   // exposes no global, and the behaviour is what the setting exists to produce.
@@ -345,19 +345,19 @@ test('a token deep link enters the reader at the real path (§8.2)', async ({ pa
   // The token request is the one 404 that is supposed to happen.
   const failures = watchForFailures(page, ['/@ch01.xhtml'])
   await page.goto(`${baseURL}/OEBPS/text/@ch01.xhtml`)
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
 
   expect(new URL(page.url()).pathname).toBe('/OEBPS/text/ch01.xhtml')
   // §13.2's "sidebar usable after entry": SITE_ROOT must survive the entry.
-  await page.click('#toc a[data-key="OEBPS/text/deep/ch03.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('Two')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/deep/ch03.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('Two')
   expect(failures).toEqual([])
 })
 
 test('an entry with parameters does not lose them (§8.3 constraint 5)', async ({ page }) => {
   const failures = watchForFailures(page)
   await page.goto(`${baseURL}/epubsite.html?p=OEBPS/text/deep/ch03.xhtml&h=fn1`)
-  await expect(page.locator('#epub-content h1')).toHaveText('Two')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('Two')
 
   const state = await page.evaluate(() => ({ path: location.pathname, hash: location.hash }))
   expect(state.path).toBe('/OEBPS/text/deep/ch03.xhtml')
@@ -370,8 +370,8 @@ test('the site root transit page does not stay in history (§8.3 constraint 4)',
   await expect(page).toHaveURL(`${baseURL}/epubsite.html`)
 
   await page.goto(`${baseURL}/epubsite.html`)
-  await page.click('#toc a >> nth=0')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await page.click('#epubsite-toc a >> nth=0')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
 
   await page.goBack()
   // Back must not land on the transit page and be bounced forward again.
@@ -385,7 +385,7 @@ test('shell-data.json is fetched from the site root, not from the chapter direct
   page.on('request', (request) => requests.push(request.url()))
 
   await page.goto(`${baseURL}/OEBPS/text/@ch01.xhtml`)
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
 
   // §5.4.1 step 4 / C.6.2: after the entry replaced the URL, a relative fetch
   // would ask for /OEBPS/text/_epubsite_assets/shell-data.json and 404.
@@ -398,8 +398,8 @@ test('the chapter JSON-LD is injected, and the book’s block is left alone (§5
   page,
 }) => {
   await page.goto(`${baseURL}/epubsite.html`)
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
 
   const state = await page.evaluate(() => {
     const nodes = [...document.querySelectorAll('script[type="application/ld+json"]')].map((s) =>
@@ -432,8 +432,8 @@ test('the chapter node names every address the chapter is reachable at (§7.3, �
       () => JSON.parse(document.querySelector('[data-epub-ld]')?.textContent ?? '{}')['url'],
     )
 
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
 
   expect(await chapterUrl()).toEqual([
     `${baseURL}/OEBPS/text/ch01.xhtml`,
@@ -449,8 +449,8 @@ test('the chapter node names every address the chapter is reachable at (§7.3, �
   // Replaced, not accumulated. A node that kept the previous chapter's addresses
   // would tell a crawler that this page is also a copy of the chapter the reader
   // has already left — the exact claim `url` exists to make, made falsely.
-  await page.click('#toc a[data-key="OEBPS/text/deep/ch03.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('Two')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/deep/ch03.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('Two')
 
   expect(await chapterUrl()).toEqual([
     `${baseURL}/OEBPS/text/deep/ch03.xhtml`,
@@ -460,7 +460,7 @@ test('the chapter node names every address the chapter is reachable at (§7.3, �
   // And the landing page has no chapter node at all, so no stale `url` survives
   // the reader going back to it.
   await page.goto(`${baseURL}/epubsite.html`)
-  await expect(page.locator('#toc')).toBeVisible()
+  await expect(page.locator('#epubsite-toc')).toBeVisible()
   expect(await page.locator('[data-epub-ld]').count()).toBe(0)
 })
 
@@ -494,8 +494,8 @@ test('an absolute --base-url does not make the reader list the real address twic
 
   await page.goto(`${origin}/epubsite.html`)
   await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
 
   // Read through a locator rather than `page.evaluate`, so that a stall names the
   // step: `evaluate` has no timeout of its own and reports only "test timeout".
@@ -536,8 +536,8 @@ test('the landing page’s canonical is withdrawn on a chapter and put back afte
   await expect(canonical).toHaveCount(1)
   expect(await canonical.getAttribute('href')).toBe(`${origin}/epubsite.html`)
 
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
 
   // The document is a chapter now, so the landing page's claim is false and must
   // be gone. It is not *replaced* by the chapter's own address: under this design
@@ -549,18 +549,18 @@ test('the landing page’s canonical is withdrawn on a chapter and put back afte
   // `historyRestore`. It is also the path a removal-only implementation fails —
   // nothing else re-asserts the head's state, so the tag would stay gone.
   await page.goBack()
-  await expect(page.locator('#epub-content h1')).toHaveText('Sample Book')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('Sample Book')
   await expect(canonical).toHaveCount(1)
   expect(await canonical.getAttribute('href')).toBe(`${origin}/epubsite.html`)
 
   // And the home control is the other one: a fresh request whose response is cut
-  // down to `#epub-content`'s children. Same head state, different route to it.
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  // down to `#epubsite-content`'s children. Same head state, different route to it.
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
   await expect(canonical).toHaveCount(0)
 
-  await page.click('#home')
-  await expect(page.locator('#epub-content h1')).toHaveText('Sample Book')
+  await page.click('#epubsite-home')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('Sample Book')
   await expect(canonical).toHaveCount(1)
   expect(await canonical.getAttribute('href')).toBe(`${origin}/epubsite.html`)
 })
@@ -574,18 +574,18 @@ test('a missing resource is not hijacked into a chapter load (§8.3 constraint 3
   // The guide's own page, not the reader: a broken image must stay a broken
   // image, or every asset defect is disguised as "the reader is starting".
   await expect(page.locator('h1')).toHaveText('Page not found')
-  expect(await page.locator('#toc').count()).toBe(0)
+  expect(await page.locator('#epubsite-toc').count()).toBe(0)
   expect(failures).toEqual([])
 })
 
 test('a link within the current chapter does not re-request it (§5.7)', async ({ page }) => {
   const requests: string[] = []
   await page.goto(`${baseURL}/epubsite.html`)
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
 
   page.on('request', (request) => requests.push(request.url()))
-  await page.click('#epub-content a[href$="#sec1"]')
+  await page.click('#epubsite-content a[href$="#sec1"]')
   await page.waitForTimeout(300)
 
   // §13.2's requirement for this case, and it holds: the short-circuit caught
@@ -607,10 +607,10 @@ test('a link within the current chapter does not re-request it (§5.7)', async (
  */
 test('a same-chapter fragment moves the reader to the anchor (§5.7)', async ({ page }) => {
   await ready(page)
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]')
-  await expect(page.locator('#epub-content h1')).toHaveText('One')
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]')
+  await expect(page.locator('#epubsite-content h1')).toHaveText('One')
 
-  await page.click('#epub-content a[href$="#sec1"]')
+  await page.click('#epubsite-content a[href$="#sec1"]')
   await expect.poll(() => new URL(page.url()).hash).toBe('#sec1')
 })
 

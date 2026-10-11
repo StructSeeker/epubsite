@@ -144,6 +144,7 @@ epubsite moby-dick.epub --dry-run --json | jq '.stats'
 | `--pagefind <path>` | auto | Explicit Pagefind binary. |
 | `--no-spa` | | Multi-page site only — do not inject htmx. Every chapter link becomes a normal page load. |
 | `--theme <t>` | `auto` | `auto` \| `light` \| `dark`. |
+| `--content-style <s>` | `book` | `book` \| `reader`. `reader` drops the book's own stylesheets and typesets its content with the reader's default, which follows `--theme`. See [The reader's own style](#the-readers-own-style). |
 | `--clean` | off | Delete the output directory first. |
 | `--force` | off | Write into a non-empty output directory. |
 | `--dry-run` | off | Validate and report, but write nothing. |
@@ -221,11 +222,13 @@ namespace, rather than silently overwriting part of your book.
 | **Page through the book** | The toolbar's previous/next buttons walk the spine's linear reading order — the same list `publication.json` publishes — so covers and the navigation document are not pages you turn into. A chapter the book's own table of contents omits is still visited. |
 | **One honest canonical** | With an absolute `--base-url` the landing page carries a canonical link and a chapter carries none: the reader withdraws it on entry and restores it on the way back. |
 | **Sidebar from the book's own navigation** | Uses the EPUB 3 `nav` document, falling back to the NCX. Honours `page-progression-direction` for RTL books. |
-| **Per-chapter styles, restored** | Each chapter's own stylesheet links, `@import`s, inline `<style>`, `body` class, `lang` and `dir` are reapplied as you navigate — the book looks the way its publisher intended, chapter by chapter. |
+| **Per-chapter styles, restored** | Each chapter's own stylesheet links, `@import`s, inline `<style>`, `body` class, `lang` and `dir` are reapplied as you navigate — the book looks the way its publisher intended, chapter by chapter. Unless you ask for [the reader's own style](#the-readers-own-style) instead. |
 | **Shareable deep links** | A link to `/EPUB/text/@ch01.xhtml` enters the reader at the right chapter, then rewrites the address bar to the honest path. Copy the link button gives a URL that always works. |
 | **Full-text search** | `--search` builds a Pagefind index over the spine. Results are highlighted and clicking one stays *inside* the reader. |
 | **Structured data** | Schema.org `Book` / `Chapter` JSON-LD, plus a `publication.json` Web Publication Manifest. Each chapter's `url` lists both addresses it is reachable at. A `@id` is the book's own `dc:identifier`, so it survives a redeploy. |
 | **Theming** | `auto` / `light` / `dark`, implemented with `light-dark()` and `color-scheme` so it follows the OS and can be overridden. |
+| **A reader's own style, on request** | `--content-style reader` stops shipping the book's stylesheets and typesets the content with the reader's own default — for books whose typography fights dark mode. The book's files are still untouched. |
+| **A namespace for the reader's chrome** | Every class and id the reader emits is prefixed `epubsite-`. A book whose stylesheet calls its own table of contents `#toc` gets its own table of contents styled — never the reader's sidebar. |
 | **Fixed-layout books handled honestly** | Pre-paginated EPUBs cannot be reflowed by a shell, so the build degrades to the plain multi-page site and says so on the landing page instead of pretending. |
 | **Reference auditing** | The build reports external resources and links that escape the site root, so you know what will break offline. |
 | **Strict by design** | Unknown flags are errors. Every failure has a stable exit code and a machine-readable `--json` form. |
@@ -284,6 +287,36 @@ still in place instead of disappearing. They are the only links in the shell who
 issues the swap itself — a boosted link would keep requesting whichever chapter it
 was first processed for, and a click that does nothing at all is what that looks
 like.
+
+Everything the reader owns is namespaced: its classes and ids are prefixed
+`epubsite-`. Chapter markup is swapped into the *same document* as that chrome,
+and the book's stylesheets are active while it is, so a generic name would be a
+rule waiting to collide in both directions — a book whose stylesheet says
+`#toc { display: none }` would hide the reader's sidebar, and a book's own
+`.notice` would pick up the reader's notice box.
+
+### The reader's own style
+
+The book's typography is the publisher's, by default: each chapter's stylesheets
+are collected at build time and reapplied as you navigate. That is the right
+default, and it has one visible cost — a book that hard-codes black text on white
+paper stays a white page inside a dark reader, because `--theme` governs the
+reader's own chrome and nothing else.
+
+`--content-style reader` closes that gap the only way this project can, without
+editing the book: the build stops shipping the book's stylesheets to the reader at
+all, and the reader applies its own stylesheet instead — a typographic default
+(platform serif for text, a monospace stack for code, tables and quotes drawn with
+the same tokens as the toolbar) whose few colours come from the theme palette, so
+light and dark both work. The book's files are untouched, which is why a chapter
+opened directly, without the reader, still looks exactly as its publisher made it.
+
+The reader's sheet *replaces* the book's rather than layering under it, because
+that is what "use your own" has to mean. Two limits are worth knowing before you
+reach for it: styles written into the book's markup (`style="…"`, `align`,
+`bgcolor`) are markup and are left alone, and the flag fails the build with exit 2
+when there is no reader to apply it to — under `--no-spa`, or for a fixed-layout
+book, whose chapters are the book's own pages.
 
 ### The token protocol: shareable deep links
 
@@ -419,6 +452,12 @@ These are decisions, not oversights:
 - **Scripts in the book do not execute.** Chapter content is inserted with script
   tags disallowed, so a hosted book cannot run arbitrary code in the reader's
   session.
+- **`--content-style reader` needs the reader.** With `--no-spa`, or for a
+  fixed-layout book, a chapter is the book's own file and there is nothing to apply
+  the reader's stylesheet with, so the build fails with exit 2 and names the
+  reason rather than quietly ignoring the flag. Styles written into the book's
+  *markup* (`style="…"`, `align`, `bgcolor`) are markup and are left alone: the
+  promise is "the book's stylesheets are not applied", not "the book is edited".
 - **A book's `@id` is its own `dc:identifier`, copied as written.** Identity is not
   location: the value does not change when you move the site to another domain.
   The consequence is that a book identifying itself with something that is not an

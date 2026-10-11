@@ -16,7 +16,7 @@
  * assistive technology reads as *expanded*, the exact opposite of the intent.
  */
 export function wireDrawer(): void {
-  const toggle = document.getElementById('toc-toggle')
+  const toggle = document.getElementById('epubsite-toc-toggle')
   if (toggle === null) return
 
   const root = document.documentElement

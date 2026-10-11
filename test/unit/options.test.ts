@@ -16,6 +16,9 @@ describe('resolveOptions', () => {
     expect(options.hosting).toBe('404')
     expect(options.jsonLd).toBe('full')
     expect(options.spa).toBe(true)
+    // The book keeps its own styles unless the publisher says otherwise: the
+    // reader's default is an opt-in exception to §1.2, not a new default.
+    expect(options.contentStyle).toBe('book')
     expect(options.baseUrl).toEqual({ form: 'path', href: '/' })
   })
 
@@ -27,6 +30,14 @@ describe('resolveOptions', () => {
     expect(() => resolveOptions({ hosting: 'magic' as never })).toThrow(/--hosting/)
     expect(() => resolveOptions({ jsonLd: 'fat' as never })).toThrow(/--json-ld/)
     expect(() => resolveOptions({ theme: 'sepia' as never })).toThrow(/--theme/)
+    expect(() => resolveOptions({ contentStyle: 'none' as never })).toThrow(/--content-style/)
+  })
+
+  it('accepts reader as a valid value even when the site cannot honour it', () => {
+    // Whether there *is* a reader is a property of the book and of `--no-spa`,
+    // which only the build can know — the same split as `hosting: 'rewrite'`
+    // above, and the reason the refusal lives in `build()` rather than here.
+    expect(resolveOptions({ contentStyle: 'reader' }).contentStyle).toBe('reader')
   })
 
   it('accepts rewrite as a valid value even though the feature is stubbed', () => {

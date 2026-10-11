@@ -28,7 +28,7 @@ export interface ShareContext {
 }
 
 export function wireShare(context: ShareContext): void {
-  const button = document.getElementById('share')
+  const button = document.getElementById('epubsite-share')
   if (button === null) return
 
   button.addEventListener('click', () => {

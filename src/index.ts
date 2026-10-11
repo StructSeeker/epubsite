@@ -21,6 +21,7 @@ export {
   type BaseUrl,
   type BaseUrlForm,
   type BuildOptions,
+  type ContentStyle,
   type HostingMode,
   type JsonLdMode,
   type Theme,

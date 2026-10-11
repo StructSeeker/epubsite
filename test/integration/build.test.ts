@@ -158,14 +158,14 @@ describe('build — a site that is the book', () => {
 
     expect(shell.startsWith('<!doctype html>')).toBe(true)
     expect(shell).toContain('<title>Sample Book</title>')
-    expect(shell).toContain('<nav id="toc" aria-label="Table of contents">')
+    expect(shell).toContain('<nav id="epubsite-toc" aria-label="Table of contents">')
     // Absolute paths in the markup would be wrong: the shell is served from the
     // site root, and a relative link keeps the artifact deployment-agnostic (I4).
     expect(shell).toContain('href="OEBPS/text/ch01.xhtml"')
     expect(shell).toContain('href="OEBPS/text/deep/ch03.xhtml"')
     // The description carries `<em>` in the source; it must arrive as text.
-    expect(shell).toContain('<p class="description">A sample with markup.</p>')
-    expect(shell).toContain('<p class="byline">Ada Lovelace</p>')
+    expect(shell).toContain('<p class="epubsite-description">A sample with markup.</p>')
+    expect(shell).toContain('<p class="epubsite-byline">Ada Lovelace</p>')
   })
 
   it('uses the book’s own navigation labels and nesting (§4.3)', async () => {
@@ -177,7 +177,7 @@ describe('build — a site that is the book', () => {
     expect(shell).toContain('>Section 1.1</a>')
     expect(shell).toContain('href="OEBPS/text/ch01.xhtml#sec1"')
     // The landmarks nav is kept as a secondary list (§4.3).
-    expect(shell).toContain('<section id="landmarks"')
+    expect(shell).toContain('<section id="epubsite-landmarks"')
     expect(shell).toContain('>Start</a>')
   })
 
@@ -187,7 +187,7 @@ describe('build — a site that is the book', () => {
 
     expect(shell).toContain('hx-boost="true"')
     // Without this override boost targets <body> and the sidebar is swapped away.
-    expect(shell).toContain('hx-target="#epub-content"')
+    expect(shell).toContain('hx-target="#epubsite-content"')
     expect(shell).toContain('hx-swap="innerHTML show:top"')
     // §5.3: shell links carry the marker the runtime absolutises.
     expect(shell).toContain('href="OEBPS/text/ch01.xhtml" data-shell')
@@ -198,13 +198,13 @@ describe('build — a site that is the book', () => {
     const { site } = await buildSite()
     const shell = (await readTree(site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
 
-    // Where it is matters as much as what it says: inside `#epub-content`, which a
+    // Where it is matters as much as what it says: inside `#epubsite-content`, which a
     // chapter replaces wholesale. That is the whole mechanism by which the credit
     // is the landing page's and not the reader's. Asserted as a position rather
     // than assumed, because a future edit that moves it out of the pane would
     // silently make it permanent.
-    const footer = shell.indexOf('<footer class="credit">')
-    expect(footer).toBeGreaterThan(shell.indexOf('<main id="epub-content"'))
+    const footer = shell.indexOf('<footer class="epubsite-credit">')
+    expect(footer).toBeGreaterThan(shell.indexOf('<main id="epubsite-content"'))
     expect(footer).toBeLessThan(shell.indexOf('</main>'))
 
     // The attribute set is conditional (`hx-boost` only in the SPA), so the tag is
@@ -221,7 +221,7 @@ describe('build — a site that is the book', () => {
     const plain = await buildSite(sampleEpub(), { spa: false })
     const noSpa =
       (await readTree(plain.site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
-    expect(noSpa).toContain('<footer class="credit">')
+    expect(noSpa).toContain('<footer class="epubsite-credit">')
     const plainLink =
       /<a href="https:\/\/github\.com\/StructSeeker\/epubsite"[^>]*>epubsite<\/a>/.exec(noSpa)?.[0] ?? ''
     expect(plainLink).toContain('target="_blank"')
@@ -248,7 +248,7 @@ describe('build — a site that is the book', () => {
     expect(shell).not.toContain('<script type="module"')
     expect(shell).toContain('<script type="application/ld+json">')
     // Multi-page still works: the skip link is a plain fragment again.
-    expect(shell).toContain('href="#epub-content"')
+    expect(shell).toContain('href="#epubsite-content"')
   })
 
   it('describes every spine chapter in shell-data.json (A.2)', async () => {
@@ -323,19 +323,19 @@ describe('build — a site that is the book', () => {
 
     // Each pager anchor, in document order, as one string.
     const anchors = (shell: string): string[] =>
-      [...shell.matchAll(/<a id="(?:prev|next)"[\s\S]*?<\/a>/g)].map((match) => match[0])
+      [...shell.matchAll(/<a id="epubsite-(?:prev|next)"[\s\S]*?<\/a>/g)].map((match) => match[0])
 
     const ltr = anchors(await read())
     expect(ltr).toHaveLength(2)
     // Landing state: next starts the book. Relative and marked `data-shell`, so it
     // is correct before the runtime exists and absolutised at load otherwise.
-    expect(ltr[1]).toContain('id="next"')
+    expect(ltr[1]).toContain('id="epubsite-next"')
     expect(ltr[1]).toContain('href="OEBPS/text/ch01.xhtml"')
     expect(ltr[1]).toContain('data-shell')
     expect(ltr[1]).toContain('aria-label="Next chapter"')
     // Unavailable is *no href*: a link with nowhere to go is not a link, so there
     // is nothing to activate and nothing a middle-click could open.
-    expect(ltr[0]).toContain('id="prev"')
+    expect(ltr[0]).toContain('id="epubsite-prev"')
     expect(ltr[0]).not.toContain('href=')
     expect(ltr[0]).toContain('aria-disabled="true"')
     expect(ltr[0]).toContain('aria-label="Previous chapter"')
@@ -354,8 +354,8 @@ describe('build — a site that is the book', () => {
     const mirrored = anchors(
       await read(sampleEpub({ 'OEBPS/content.opf': sampleOpf({ progression: 'rtl' }) })),
     )
-    expect(mirrored[0]).toContain('id="next"')
-    expect(mirrored[1]).toContain('id="prev"')
+    expect(mirrored[0]).toContain('id="epubsite-next"')
+    expect(mirrored[1]).toContain('id="epubsite-prev"')
     for (const [index, arrow] of ['M14.5 5.5', 'M9.5 5.5'].entries()) {
       expect(ltr[index]).toContain(arrow)
       expect(mirrored[index]).toContain(arrow)
@@ -364,8 +364,8 @@ describe('build — a site that is the book', () => {
     // No runtime, so no paging: in a multi-page site the shell is the landing page
     // and a chapter is the book's own file with no toolbar at all.
     const noSpa = await read(sampleEpub(), { spa: false })
-    expect(noSpa).not.toContain('id="prev"')
-    expect(noSpa).not.toContain('id="next"')
+    expect(noSpa).not.toContain('id="epubsite-prev"')
+    expect(noSpa).not.toContain('id="epubsite-next"')
   })
 
   it('adds the origin-dependent url to shell-data only for an absolute --base-url', async () => {
@@ -518,7 +518,7 @@ describe('build — refusals', () => {
     )
     // The failure is reported, not fatal: the site is complete and usable.
     expect(await readFile(join(result.outDir, RESERVED_PATHS.shell), 'utf8')).toContain(
-      'id="search-open"',
+      'id="epubsite-search-open"',
     )
   })
 
@@ -534,7 +534,7 @@ describe('build — refusals', () => {
     expect(result.stats.chapters).toBe(4)
 
     const shell = await readFile(join(site.out, RESERVED_PATHS.shell), 'utf8')
-    expect(shell).toContain('id="search-open"')
+    expect(shell).toContain('id="epubsite-search-open"')
 
     // The bundle Pagefind writes, including the Component UI the runtime imports.
     const bundle = join(site.out, RESERVED_PATHS.assetsDir, 'pagefind')
@@ -1036,7 +1036,7 @@ describe('build — edge cases and presentation (§11, §12)', () => {
     expect(shell).not.toContain('hx-boost')
     expect(tree.has('_epubsite_assets/shell.js')).toBe(false)
     // §12 asks for the degradation to be explained, not just performed.
-    expect(shell).toContain('class="notice"')
+    expect(shell).toContain('class="epubsite-notice"')
     expect(shell).toContain('fixed page layout')
     expect(result.diagnostics.warnings.map((warning) => warning.code)).toContain('W_PRE_PAGINATED')
   })
@@ -1135,23 +1135,23 @@ describe('build — presentation that must not leak into reading order', () => {
     // The drawer toggle lost its text, so `aria-label` is now the only thing that
     // can name it; the drawn symbol is `aria-hidden` because it carries no text of
     // its own. A symbol-only control without a name is announced as "button".
-    const toggle = /<button id="toc-toggle"[^>]*>/.exec(shell)?.[0] ?? ''
+    const toggle = /<button id="epubsite-toc-toggle"[^>]*>/.exec(shell)?.[0] ?? ''
     expect(toggle).toContain('aria-label="Contents"')
     expect(toggle).toContain('aria-expanded="true"')
-    expect(toggle).toContain('aria-controls="toc"')
+    expect(toggle).toContain('aria-controls="epubsite-toc"')
     expect(toggle).not.toContain('>Contents<')
 
     // Home is a link, not a button: it navigates. Three attributes carry it, and
     // each fails silently on its own — a relative href after a pushState is a 404
     // the 404 guide deliberately does not rescue, and a boosted request without
-    // `hx-select` puts the shell's whole body inside `#epub-content`.
+    // `hx-select` puts the shell's whole body inside `#epubsite-content`.
     //
     // Matched as one whole tag rather than by searching the document for each
     // attribute, because `data-shell` and `href="epubsite.html…"` also belong to
     // the skip link: three separate `toContain`s would pass on a shell that had no
     // home control at all.
     const home =
-      /<a id="home"[^>]*aria-label="Back to the book's home page" hx-select="#epub-content > \*">/.exec(
+      /<a id="epubsite-home"[^>]*aria-label="Back to the book's home page" hx-select="#epubsite-content > \*">/.exec(
         shell,
       )?.[0] ?? ''
     expect(home).toContain('href="epubsite.html"')
@@ -1161,7 +1161,140 @@ describe('build — presentation that must not leak into reading order', () => {
     // runtime the shell is always the landing page, and the drawer cannot open.
     const plain = await buildSite(sampleEpub(), { spa: false })
     const noSpa = (await readTree(plain.site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
-    expect(noSpa).not.toContain('id="home"')
+    expect(noSpa).not.toContain('id="epubsite-home"')
+  })
+})
+
+describe('build — the shell’s own namespace (§5.13)', () => {
+  /** The shell document, as a browser receives it. */
+  async function shellOf(options: Partial<BuildOptions> = {}): Promise<string> {
+    const { site } = await buildSite(sampleEpub(), options)
+    return (await readTree(site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
+  }
+
+  it('prefixes every class and id it writes, so a book cannot style the reader', async () => {
+    const shell = await shellOf()
+    const tokens = [...shell.matchAll(/\s(?:class|id)="([^"]*)"/g)].flatMap((match) =>
+      (match[1] as string).split(/\s+/).filter((token) => token !== ''),
+    )
+
+    // A detector that matches nothing proves nothing (F.7), so the parse is
+    // asserted before the rule is.
+    expect(tokens.length).toBeGreaterThan(15)
+    expect(tokens).toContain('epubsite-toolbar')
+
+    // `htmx-indicator` is htmx's own class: the runtime toggles `.htmx-request`
+    // on the element `hx-indicator` names, and htmx's stylesheet is not vendored,
+    // so this one name is not ours to rename.
+    expect(
+      tokens.filter((token) => !token.startsWith('epubsite-') && token !== 'htmx-indicator'),
+    ).toEqual([])
+  })
+
+  it('resolves every id its own attributes point at', async () => {
+    const shell = await shellOf()
+    const ids = new Set([...shell.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1] as string))
+    expect(ids.size).toBeGreaterThan(8)
+
+    // The attributes that *name* an element rather than an address. `hx-select`
+    // carries a whole selector, so only its id tokens are references, and
+    // `aria-controls` is the one form that is written without a `#`.
+    const references: string[] = []
+    for (const match of shell.matchAll(/\s(?:hx-target|hx-indicator|hx-select)="([^"]+)"/g)) {
+      for (const id of (match[1] as string).matchAll(/#([\w-]+)/g)) references.push(id[1] as string)
+    }
+    for (const match of shell.matchAll(/\saria-controls="([^"]+)"/g)) {
+      references.push(...(match[1] as string).split(/\s+/).filter((token) => token !== ''))
+    }
+
+    expect(references.length).toBeGreaterThan(2)
+    for (const reference of references) {
+      expect(ids.has(reference), `${reference} is not an id in the shell`).toBe(true)
+    }
+  })
+})
+
+describe('build — the reader’s own content style (§1.2, §5.5)', () => {
+  interface Payload {
+    byKey: Record<
+      string,
+      {
+        title: string
+        bodyClass: string
+        headStyles: { links: string[]; imports: string[]; inline: string[] }
+      }
+    >
+    readerStyles?: string
+  }
+
+  async function payload(options: Partial<BuildOptions> = {}): Promise<Payload> {
+    const { site } = await buildSite(sampleEpub(), options)
+    const raw =
+      (await readTree(site.out))
+        .get('_epubsite_assets/shell-data.json')
+        ?.content.toString('utf8') ?? ''
+    return JSON.parse(raw) as Payload
+  }
+
+  it('sends the reader’s stylesheet in place of the book’s own', async () => {
+    const data = await payload({ contentStyle: 'reader' })
+    const ch1 = data.byKey['OEBPS/text/ch01.xhtml']
+
+    // The sheet travels as *text*, because the runtime injects it into a `<style>`
+    // slot and removes it again on the landing page — so there is no second copy
+    // sitting in `_epubsite_assets/` for anyone to fetch.
+    expect(data.readerStyles).toContain('#epubsite-content')
+    // Scoped to the pane: the sidebar and toolbar are in the same document while
+    // this sheet is live, so an unscoped `h2` would reach the landmarks heading.
+    expect(data.readerStyles).not.toContain('#epubsite-toc')
+
+    // Emptied rather than dropped. The runtime's shape is then identical in both
+    // modes, and exactly one place — the build — decides that the reader's sheet
+    // replaces the book's rather than layering under it.
+    expect(ch1?.headStyles).toEqual({ links: [], imports: [], inline: [] })
+
+    // Everything that is *not* styling survives: a body class is markup, and the
+    // runtime still applies it. It is simply inert now, because the sheet that
+    // would have keyed on it is gone.
+    expect(ch1?.bodyClass).toBe('calibre')
+    expect(ch1?.title).toBe('Chapter 1')
+  })
+
+  it('leaves the book’s own styles alone when nothing was asked for', async () => {
+    const data = await payload()
+    const ch1 = data.byKey['OEBPS/text/ch01.xhtml']
+
+    // Absent, not empty: "the book styles itself" is a different statement from
+    // "here is a stylesheet".
+    expect('readerStyles' in data).toBe(false)
+    expect(ch1?.headStyles.links).toEqual(['OEBPS/Styles/book.css'])
+    expect(ch1?.headStyles.imports).toEqual(['OEBPS/Styles/extra.css'])
+    expect(ch1?.headStyles.inline.join('')).toContain('text-indent')
+  })
+
+  it('refuses it when there is no reader to apply it to (§12)', async () => {
+    // Multi-page: each chapter is the book's own file, so the flag could only be
+    // ignored — and a build that quietly ignores an explicit request is the
+    // failure mode §9.2's posture keeps refusing.
+    const multiPage = await failure(() =>
+      buildSite(sampleEpub(), { spa: false, contentStyle: 'reader' }),
+    )
+    expect(multiPage.exitCode).toBe(2)
+    expect(multiPage.message).toContain('--content-style reader')
+    expect(multiPage.message).toContain('--no-spa')
+
+    // Pre-paginated: the shell is dropped for the book rather than by the user,
+    // and the refusal says which of the two happened.
+    const fixed = sampleEpub({
+      'OEBPS/content.opf': sampleOpf().replace(
+        '<meta property="dcterms:modified">2026-01-01T00:00:00Z</meta>',
+        '<meta property="dcterms:modified">2026-01-01T00:00:00Z</meta>' +
+          '<meta property="rendition:layout">pre-paginated</meta>',
+      ),
+    })
+    const prePaginated = await failure(() => buildSite(fixed, { contentStyle: 'reader' }))
+    expect(prePaginated.exitCode).toBe(2)
+    expect(prePaginated.message).toContain('pre-paginated')
   })
 })
 

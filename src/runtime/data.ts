@@ -57,6 +57,13 @@ export interface ShellData {
    */
   readingOrder: EntryPath[]
   nav: NavItem[]
+  /**
+   * The reader's own stylesheet for book content (`--content-style reader`, §5.5).
+   *
+   * Present means the reader styles the book: the build sends no book sheets in
+   * that case, and this text takes their place in the same `@layer epub` slot.
+   */
+  readerStyles?: string
 }
 
 export async function loadShellData(root: URL): Promise<ShellData> {

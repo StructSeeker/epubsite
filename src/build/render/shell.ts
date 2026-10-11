@@ -11,16 +11,20 @@
  *                                   hundreds of ordinary links inside book
  *                                   content. It inherits, so nothing in the
  *                                   book needs editing.
- *   `hx-target="#epub-content"`     overrides boost's default target (`<body>`).
+ *   `hx-target="#epubsite-content"` overrides boost's default target (`<body>`).
  *                                   The sidebar surviving navigation is
  *                                   *entirely* this: it sits outside the target,
  *                                   so htmx never touches it, and its scroll
  *                                   position, expansion and focus come free.
- *   `hx-swap="innerHTML show:top"`  `outerHTML` would rebuild `#epub-content`
+ *   `hx-swap="innerHTML show:top"`  `outerHTML` would rebuild `#epubsite-content`
  *                                   itself and discard state attached to it;
  *                                   `show:top` resets the viewport, without
  *                                   which a jump between long chapters lands
  *                                   somewhere arbitrary.
+ *
+ * Every id and class below is namespaced (`epubsite-`), because these names are
+ * hooks *into the same document as the book*: §5.13 records the collision that
+ * made that necessary.
  *
  * `--no-spa` emits none of them and no runtime module either, so the same markup
  * works as an ordinary multi-page site. That is not a degraded mode so much as
@@ -82,9 +86,9 @@ export function renderShell(input: ShellInput): SafeHtml {
       : html`<link rel="canonical" href="${base}${input.shellName}" data-epub-canonical>`
 
   // The skip link is shell chrome, so under the SPA it must name the shell file
-  // explicitly: after a pushState, a bare `#epub-content` would resolve against
+  // explicitly: after a pushState, a bare `#epubsite-content` would resolve against
   // the chapter's directory and navigate away from the reader (§5.2.1).
-  const skipHref = spa ? `${input.shellName}#epub-content` : '#epub-content'
+  const skipHref = spa ? `${input.shellName}#epubsite-content` : '#epubsite-content'
 
   return html`<!doctype html>
 <html lang="${lang}"${dirAttr}${themeAttr(input.theme)}>
@@ -98,22 +102,22 @@ export function renderShell(input: ShellInput): SafeHtml {
 <!-- The runtime owns everything below this line in <head> (§5.4.3). -->
 </head>
 <body${bodyAttrs(spa)}>
-<a class="skip-link" href="${skipHref}"${shellMarker(spa)}>Skip to content</a>
-<nav id="toc" aria-label="Table of contents">
+<a class="epubsite-skip-link" href="${skipHref}"${shellMarker(spa)}>Skip to content</a>
+<nav id="epubsite-toc" aria-label="Table of contents">
 ${renderToc(input)}
 </nav>
-<div id="frame">
-<header id="toolbar">
+<div id="epubsite-frame">
+<header id="epubsite-toolbar">
 ${tocToggle()}
 ${homeLink(input)}
-<span id="book-title">${model.title}</span>
+<span id="epubsite-book-title">${model.title}</span>
 ${pager(input)}
 ${searchButton(input)}
 ${collapseButton(input)}
 ${shareButton(spa)}
-<div id="progress" class="htmx-indicator" role="status">Loading…</div>
+<div id="epubsite-progress" class="htmx-indicator" role="status">Loading…</div>
 </header>
-<main id="epub-content" tabindex="-1" aria-live="polite">
+<main id="epubsite-content" tabindex="-1" aria-live="polite">
 ${renderLanding(input)}
 </main>
 </div>
@@ -125,7 +129,7 @@ ${runtimeScript(spa)}
 
 function bodyAttrs(spa: boolean): SafeHtml {
   if (!spa) return markSafe('')
-  return html` hx-boost="true" hx-target="#epub-content" hx-swap="innerHTML show:top" hx-indicator="#progress"`
+  return html` hx-boost="true" hx-target="#epubsite-content" hx-swap="innerHTML show:top" hx-indicator="#epubsite-progress"`
 }
 
 /**
@@ -179,7 +183,7 @@ function runtimeScript(spa: boolean): SafeHtml {
  * `shell.css` — see the note there.
  */
 function tocToggle(): SafeHtml {
-  return html`<button id="toc-toggle" type="button" aria-expanded="true" aria-controls="toc" aria-label="Contents">${CONTENTS_ICON}</button>`
+  return html`<button id="epubsite-toc-toggle" type="button" aria-expanded="true" aria-controls="epubsite-toc" aria-label="Contents">${CONTENTS_ICON}</button>`
 }
 
 /**
@@ -200,7 +204,7 @@ function tocToggle(): SafeHtml {
  * `hx-select` is what makes the swap possible at all. The landing page is not a
  * fragment: it is the shell document, and a boosted request to it returns the
  * whole thing. htmx selects the matching nodes *themselves* and swaps them with
- * `innerHTML`, so selecting `#epub-content` would nest the pane inside itself — a
+ * `innerHTML`, so selecting `#epubsite-content` would nest the pane inside itself — a
  * duplicate id, two sidebars, one document. Selecting its **children** replaces
  * the pane's contents with the landing page, which is what the reader asked for.
  *
@@ -220,7 +224,7 @@ function homeLink(input: ShellInput): SafeHtml {
   // `hx-select`: the selector's value contains a literal `>`, and a reader (or a
   // test) that wants to pull this one tag out of the document can only do so with a
   // simple `[^>]*` scan if no earlier attribute swallows the closing bracket.
-  return html`<a id="home" href="${input.shellName}" data-shell aria-label="Back to the book's home page" hx-select="#epub-content > *">${HOME_ICON}</a>`
+  return html`<a id="epubsite-home" href="${input.shellName}" data-shell aria-label="Back to the book's home page" hx-select="#epubsite-content > *">${HOME_ICON}</a>`
 }
 
 /**
@@ -257,7 +261,7 @@ function pager(input: ShellInput): SafeHtml {
   const controls = presentationOrder(PAGER_CONTROLS, input.model.progression)
 
   return html`${controls.map((control, index) => {
-    const target = control.id === 'next' ? first : undefined
+    const target = control.id === 'epubsite-next' ? first : undefined
     const initial =
       target === undefined
         ? // Unavailable: no `href`, so there is nothing to activate, and the three
@@ -280,8 +284,8 @@ function pager(input: ShellInput): SafeHtml {
  * the data and then have to undo it.
  */
 const PAGER_CONTROLS = [
-  { id: 'prev', label: 'Previous chapter' },
-  { id: 'next', label: 'Next chapter' },
+  { id: 'epubsite-prev', label: 'Previous chapter' },
+  { id: 'epubsite-next', label: 'Next chapter' },
 ] as const
 
 /**
@@ -297,7 +301,7 @@ const PAGER_CONTROLS = [
  */
 function collapseButton(input: ShellInput): SafeHtml {
   if (!input.spa || !hasBranches(input.model)) return markSafe('')
-  return html`<button id="toc-collapse" type="button" data-shell-toc aria-label="Collapse all sections">${COLLAPSE_ALL_ICON}</button>`
+  return html`<button id="epubsite-toc-collapse" type="button" data-shell-toc aria-label="Collapse all sections">${COLLAPSE_ALL_ICON}</button>`
 }
 
 /**
@@ -343,7 +347,7 @@ const CONTENTS_ICON = html`<svg viewBox="0 0 24 24" width="20" height="20" fill=
  */
 function shareButton(spa: boolean): SafeHtml {
   if (!spa) return markSafe('')
-  return html`<button id="share" type="button" data-shell-share aria-label="Copy a link to this book" disabled>${LINK_ICON}</button>`
+  return html`<button id="epubsite-share" type="button" data-shell-share aria-label="Copy a link to this book" disabled>${LINK_ICON}</button>`
 }
 
 /**
@@ -357,7 +361,7 @@ function shareButton(spa: boolean): SafeHtml {
  */
 function searchButton(input: ShellInput): SafeHtml {
   if (!input.search || !input.spa) return markSafe('')
-  return html`<button id="search-open" type="button" data-shell-search aria-label="Search this book">${SEARCH_ICON}</button>`
+  return html`<button id="epubsite-search-open" type="button" data-shell-search aria-label="Search this book">${SEARCH_ICON}</button>`
 }
 
 /**
@@ -470,7 +474,7 @@ function renderNavItem(node: NavNode, spa: boolean): SafeHtml {
   // the SPA. Without a runtime it would be a control that does nothing — the same
   // reason the share and search controls are SPA-only.
   const disclosure = spa
-    ? html`<button class="toc-disclosure" type="button" aria-expanded="true"${attr(
+    ? html`<button class="epubsite-toc-disclosure" type="button" aria-expanded="true"${attr(
         'aria-label',
         // A grouping node has children but no label of its own, and an empty
         // `aria-label` is worse than a generic one: it names nothing at all.
@@ -482,14 +486,14 @@ function renderNavItem(node: NavNode, spa: boolean): SafeHtml {
   // entry and a branch entry start their text at the same offset and the sidebar
   // reads as one column. Putting it first would indent every branch label.
   return html`<li data-toc-branch>
-<div class="toc-row">${label}${disclosure}</div>
+<div class="epubsite-toc-row">${label}${disclosure}</div>
 ${renderNavList(node.children, spa)}
 </li>`
 }
 
 function renderLandmarks(nodes: readonly NavNode[], spa: boolean): SafeHtml {
   if (nodes.length === 0) return markSafe('')
-  return html`<section id="landmarks" aria-label="Landmarks">
+  return html`<section id="epubsite-landmarks" aria-label="Landmarks">
 <h2>Landmarks</h2>
 <ol>
 ${nodes.map(
@@ -539,10 +543,10 @@ function renderLanding(input: ShellInput): SafeHtml {
   const description = model.opf.metadata.description
 
   return html`<h1>${model.title}</h1>
-${input.notices.map((notice) => html`<p class="notice">${notice}</p>`)}
-${authors === '' ? markSafe('') : html`<p class="byline">${authors}</p>`}
-${publisher === undefined ? markSafe('') : html`<p class="publisher">${publisher}</p>`}
-${description === undefined ? markSafe('') : html`<p class="description">${description}</p>`}
+${input.notices.map((notice) => html`<p class="epubsite-notice">${notice}</p>`)}
+${authors === '' ? markSafe('') : html`<p class="epubsite-byline">${authors}</p>`}
+${publisher === undefined ? markSafe('') : html`<p class="epubsite-publisher">${publisher}</p>`}
+${description === undefined ? markSafe('') : html`<p class="epubsite-description">${description}</p>`}
 <p>Choose a chapter from the table of contents. Each chapter also opens on its own.</p>
 ${creditLine(input.spa)}`
 }
@@ -563,7 +567,7 @@ const PROJECT_URL = 'https://github.com/StructSeeker/epubsite'
  *
  * It belongs to the landing page and nowhere else, which is a consequence of
  * where it is rendered rather than a condition on it: the line sits inside
- * `#epub-content`, and opening a chapter replaces that pane with the book's own
+ * `#epubsite-content`, and opening a chapter replaces that pane with the book's own
  * markup — so the credit leaves with the landing page and comes back with it,
  * including through the home control, because the home control swaps exactly this
  * fragment back in. A deep link (token path or `?p=`) enters on a chapter and
@@ -581,5 +585,5 @@ const PROJECT_URL = 'https://github.com/StructSeeker/epubsite'
  */
 function creditLine(spa: boolean): SafeHtml {
   const boost = spa ? markSafe(' hx-boost="false"') : markSafe('')
-  return html`<footer class="credit">Built with <a href="${PROJECT_URL}"${boost} target="_blank" rel="noopener noreferrer">epubsite</a></footer>`
+  return html`<footer class="epubsite-credit">Built with <a href="${PROJECT_URL}"${boost} target="_blank" rel="noopener noreferrer">epubsite</a></footer>`
 }

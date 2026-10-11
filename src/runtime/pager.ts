@@ -36,7 +36,7 @@ import type { ShellData } from './data'
 import type { Htmx } from './htmx'
 
 /** The pager's controls, by id, in the order `shell-data.json` drives them. */
-const PAGER_IDS = ['prev', 'next'] as const
+const PAGER_IDS = ['epubsite-prev', 'epubsite-next'] as const
 
 /**
  * Points each control at its neighbour, or takes the target away.
@@ -51,8 +51,8 @@ const PAGER_IDS = ['prev', 'next'] as const
  */
 export function syncPager(data: ShellData, key: string | null, root: URL): void {
   const { prev, next } = neighbours(data.readingOrder, key)
-  setTarget('prev', prev, root)
-  setTarget('next', next, root)
+  setTarget('epubsite-prev', prev, root)
+  setTarget('epubsite-next', next, root)
 }
 
 function setTarget(id: (typeof PAGER_IDS)[number], target: EntryPath | null, root: URL): void {
@@ -112,7 +112,7 @@ function isPlainLeftClick(event: MouseEvent): boolean {
 async function navigate(htmx: Htmx, href: string, source: Element): Promise<void> {
   try {
     await htmx.ajax('GET', href, {
-      target: '#epub-content',
+      target: '#epubsite-content',
       swap: 'innerHTML show:top',
       // The URL to push, not a flag: htmx hands the string straight to
       // `history.pushState` (`Htmx.ajax` documents what passing `true` used to do).

@@ -1,5 +1,5 @@
-/*
- * Shell styles (spec §5.5, §11.2).
+ /*
+ * Shell styles (spec §5.5, §5.13, §11.2).
  *
  * The first line is load-bearing, not decoration. Declaring `epub` before
  * `shell` fixes the cascade order for the whole document, so every rule the book
@@ -13,9 +13,15 @@
  * `!important` and unlayered. Losing the layout is the one failure a reader
  * cannot work around.
  *
- * Everything below is deliberately unthemed: `--theme` and the
- * `prefers-color-scheme` palette land with the accessibility pass (P7). Adding
- * colours now would mean a `data-theme` attribute with no reader.
+ * Every class and id selector below is namespaced (`epubsite-`), and that is a
+ * correctness rule rather than tidiness: these selectors are evaluated against a
+ * document that also contains the book's own markup, so a book that happens to
+ * use `#toc` would have our sidebar's rule — a `position: fixed` overlay below
+ * the narrow breakpoint — applied to *its* table of contents. §5.13 records the
+ * failure and the rule; `test/unit/shell-namespace.test.ts` keeps it true.
+ *
+ * Theming is `light-dark()` against `:root`'s custom properties, pinned by
+ * `--theme` through `data-theme` (§11.2) — see the palette below.
  */
 @layer epub, shell;
 
@@ -126,11 +132,11 @@
      * The row has to be **definite**, and this one line was the whole defect.
      *
      * Left out, the single row is implicit and `auto`, i.e. sized by its
-     * contents. `#frame` then asked for `height: 100%` against a height derived
-     * from `#frame` itself — a cyclic reference, which CSS resolves by treating
+     * contents. `#epubsite-frame` then asked for `height: 100%` against a height derived
+     * from `#epubsite-frame` itself — a cyclic reference, which CSS resolves by treating
      * the percentage as `auto`. So a long chapter grew the row to the chapter's
-     * height, `1fr` inside `#frame` had no free space to distribute,
-     * `#epub-content`'s `overflow: auto` never engaged, and the two panes became
+     * height, `1fr` inside `#epubsite-frame` had no free space to distribute,
+     * `#epubsite-content`'s `overflow: auto` never engaged, and the two panes became
      * one very tall page inside an `overflow: hidden` viewport.
      *
      * It looked correct on the landing page, which is short enough that the row
@@ -153,7 +159,7 @@
 
   /* ---------------------------------------------------------------- sidebar */
 
-  #toc {
+  #epubsite-toc {
     grid-column: 1;
     /* A grid item's automatic minimum size is its content, which would make this
        pane grow rather than scroll. `0` lets the definite row above win. */
@@ -164,21 +170,21 @@
     background: var(--shell-surface);
   }
 
-  #toc ol {
+  #epubsite-toc ol {
     margin: 0;
     padding-inline-start: 1rem;
     list-style: none;
   }
 
-  #toc > ol {
+  #epubsite-toc > ol {
     padding-inline-start: 0;
   }
 
-  #toc li {
+  #epubsite-toc li {
     margin-block: 0.15rem;
   }
 
-  #toc a {
+  #epubsite-toc a {
     display: block;
     padding: 0.2rem 0.35rem;
     border-radius: 4px;
@@ -186,11 +192,11 @@
     text-decoration: none;
   }
 
-  #toc a:hover {
+  #epubsite-toc a:hover {
     background: var(--shell-hover);
   }
 
-  #toc a[aria-current='page'] {
+  #epubsite-toc a[aria-current='page'] {
     background: var(--shell-current);
     font-weight: 600;
   }
@@ -202,20 +208,20 @@
    * bare `<a>`, and a button placed before the label would indent every branch
    * entry and break the column.
    */
-  #toc .toc-row {
+  #epubsite-toc .epubsite-toc-row {
     display: flex;
     align-items: center;
     gap: 0.15rem;
   }
 
-  #toc .toc-row > a {
+  #epubsite-toc .epubsite-toc-row > a {
     flex: 1;
     /* Without this a long label refuses to shrink below its content and pushes
        the disclosure off the edge of the sidebar. */
     min-width: 0;
   }
 
-  #toc .toc-disclosure {
+  #epubsite-toc .epubsite-toc-disclosure {
     flex: none;
     display: inline-flex;
     align-items: center;
@@ -230,13 +236,13 @@
     line-height: 0;
   }
 
-  #toc .toc-disclosure:hover {
+  #epubsite-toc .epubsite-toc-disclosure:hover {
     color: var(--shell-fg);
     background: var(--shell-hover);
     border-radius: 4px;
   }
 
-  #toc .toc-disclosure svg {
+  #epubsite-toc .epubsite-toc-disclosure svg {
     display: block;
     width: 0.9rem;
     height: 0.9rem;
@@ -246,28 +252,28 @@
   /* Collapsed points along the inline axis. `rotate` is physical rather than
      logical, so an RTL sidebar turns the chevron the same way an LTR one does —
      cosmetic, and noted rather than solved. */
-  #toc [data-toc-branch][data-collapsed='true'] > .toc-row .toc-disclosure svg {
+  #epubsite-toc [data-toc-branch][data-collapsed='true'] > .epubsite-toc-row .epubsite-toc-disclosure svg {
     transform: rotate(-90deg);
   }
 
-  #toc [data-toc-branch][data-collapsed='true'] > ol {
+  #epubsite-toc [data-toc-branch][data-collapsed='true'] > ol {
     display: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    #toc .toc-disclosure svg {
+    #epubsite-toc .epubsite-toc-disclosure svg {
       transition: none;
     }
   }
 
-  #landmarks {
+  #epubsite-landmarks {
     margin-block-start: 1.5rem;
     padding-block-start: 0.75rem;
     border-block-start: 1px solid var(--shell-border);
     font-size: 0.9em;
   }
 
-  #landmarks h2 {
+  #epubsite-landmarks h2 {
     margin: 0 0 0.4rem;
     font-size: 0.8em;
     text-transform: uppercase;
@@ -277,14 +283,14 @@
 
   /* ------------------------------------------------------------- main frame */
 
-  #frame {
+  #epubsite-frame {
     grid-column: 2;
     display: grid;
     /*
      * The column is declared for the same reason as every other track here. Left
      * implicit it is `auto`, and `auto` is sized by the widest thing inside —
      * which was the toolbar, whose flex items do not wrap. The frame then sat
-     * 11px wider than the viewport at 500px, pushing `#epub-content`'s right
+     * 11px wider than the viewport at 500px, pushing `#epubsite-content`'s right
      * padding, the reader's right margin, past the edge of the screen.
      */
     grid-template-columns: minmax(0, 1fr);
@@ -296,7 +302,7 @@
     min-height: 0;
   }
 
-  #toolbar {
+  #epubsite-toolbar {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -347,27 +353,27 @@
    * Firefox. Both add up to a few pixels rather than the classic ~17, which is
    * the difference between a visible button and a clipped one.
    */
-  #toolbar::-webkit-scrollbar {
+  #epubsite-toolbar::-webkit-scrollbar {
     height: 6px;
   }
 
-  #toolbar::-webkit-scrollbar-thumb {
+  #epubsite-toolbar::-webkit-scrollbar-thumb {
     background: var(--shell-control);
     border-radius: 3px;
   }
 
-  #toolbar::-webkit-scrollbar-track {
+  #epubsite-toolbar::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  #book-title {
+  #epubsite-book-title {
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  #toolbar button {
+  #epubsite-toolbar button {
     font: inherit;
     padding: 0.25rem 0.6rem;
     border: 1px solid var(--shell-control);
@@ -380,14 +386,14 @@
   /* htmx toggles `.htmx-request` on the element named by `hx-indicator`. htmx's
      own stylesheet is not vendored — only its module is — so the visibility rule
      has to live here, or the indicator would be visible permanently. */
-  #progress {
+  #epubsite-progress {
     margin-inline-start: auto;
     color: var(--shell-muted);
     font-size: 0.9em;
     visibility: hidden;
   }
 
-  #progress.htmx-request {
+  #epubsite-progress.htmx-request {
     visibility: visible;
   }
 
@@ -398,23 +404,23 @@
    * than words, so they need a square hit area and an icon that takes its colour
    * from the control.
    *
-   * `#toolbar #…` rather than a bare `#…`: the shared `#toolbar button` rule above
-   * is an id plus a type selector, which outranks a lone id, so a plain `#share`
+   * `#epubsite-toolbar #…` rather than a bare `#…`: the shared `#epubsite-toolbar button` rule above
+   * is an id plus a type selector, which outranks a lone id, so a plain `#epubsite-share`
    * would silently lose the padding it is setting here.
    *
-   * Specificity is also why `#toolbar #toc-toggle` appears again further down: its
-   * `display` has to outrank *this* rule, not just `#toolbar button`. Adding the
+   * Specificity is also why `#epubsite-toolbar #epubsite-toc-toggle` appears again further down: its
+   * `display` has to outrank *this* rule, not just `#epubsite-toolbar button`. Adding the
    * toggle to this list without that would make it visible above the narrow
    * breakpoint — the hide rule would lose to a group that never meant to decide
    * anything about visibility.
    */
-  #toolbar #share,
-  #toolbar #search-open,
-  #toolbar #toc-collapse,
-  #toolbar #toc-toggle,
-  #toolbar #home,
-  #toolbar #prev,
-  #toolbar #next {
+  #epubsite-toolbar #epubsite-share,
+  #epubsite-toolbar #epubsite-search-open,
+  #epubsite-toolbar #epubsite-toc-collapse,
+  #epubsite-toolbar #epubsite-toc-toggle,
+  #epubsite-toolbar #epubsite-home,
+  #epubsite-toolbar #epubsite-prev,
+  #epubsite-toolbar #epubsite-next {
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -429,13 +435,13 @@
 
   /*
    * The controls that are `<a>` rather than `<button>` — home, and the pager —
-   * because they navigate, so they inherit none of the box that `#toolbar button`
+   * because they navigate, so they inherit none of the box that `#epubsite-toolbar button`
    * gives the others, that rule being element-qualified. They get the same box
    * here, declared once.
    */
-  #toolbar #home,
-  #toolbar #prev,
-  #toolbar #next {
+  #epubsite-toolbar #epubsite-home,
+  #epubsite-toolbar #epubsite-prev,
+  #epubsite-toolbar #epubsite-next {
     border: 1px solid var(--shell-control);
     border-radius: 4px;
     color: inherit;
@@ -451,19 +457,19 @@
    * Dimmed rather than hidden, and still focusable, so "previous chapter,
    * unavailable" can be heard rather than silently skipped.
    */
-  #toolbar #prev[aria-disabled='true'],
-  #toolbar #next[aria-disabled='true'] {
+  #epubsite-toolbar #epubsite-prev[aria-disabled='true'],
+  #epubsite-toolbar #epubsite-next[aria-disabled='true'] {
     opacity: 0.45;
     cursor: default;
   }
 
-  #toolbar #share svg,
-  #toolbar #search-open svg,
-  #toolbar #toc-collapse svg,
-  #toolbar #toc-toggle svg,
-  #toolbar #home svg,
-  #toolbar #prev svg,
-  #toolbar #next svg {
+  #epubsite-toolbar #epubsite-share svg,
+  #epubsite-toolbar #epubsite-search-open svg,
+  #epubsite-toolbar #epubsite-toc-collapse svg,
+  #epubsite-toolbar #epubsite-toc-toggle svg,
+  #epubsite-toolbar #epubsite-home svg,
+  #epubsite-toolbar #epubsite-prev svg,
+  #epubsite-toolbar #epubsite-next svg {
     display: block;
     width: 1.1rem;
     height: 1.1rem;
@@ -477,7 +483,7 @@
    * message out of the markup as well, so the DOM the runtime manipulates holds
    * no presentation.
    */
-  #share[data-flash]::after {
+  #epubsite-share[data-flash]::after {
     content: attr(data-flash);
     position: absolute;
     inset-block-start: calc(100% + 0.35rem);
@@ -493,7 +499,7 @@
     white-space: nowrap;
   }
 
-  #epub-content {
+  #epubsite-content {
     /*
      * Horizontal scrolling is allowed, but only because of the two `minmax(0, …)`
      * declarations above: the pane is now exactly the width of the viewport, so
@@ -520,16 +526,16 @@
     outline: none;
   }
 
-  #epub-content img,
-  #epub-content svg,
-  #epub-content video {
+  #epubsite-content img,
+  #epubsite-content svg,
+  #epubsite-content video {
     max-width: 100%;
     height: auto;
   }
 
   /* ---------------------------------------------------------------- utility */
 
-  .skip-link {
+  .epubsite-skip-link {
     position: absolute;
     inset-inline-start: -9999px;
     z-index: 10;
@@ -539,14 +545,14 @@
     border: 1px solid var(--shell-control);
   }
 
-  .notice {
+  .epubsite-notice {
     padding: 0.5rem 0.75rem;
     border-inline-start: 3px solid var(--shell-control);
     background: var(--shell-surface);
     color: var(--shell-muted);
   }
 
-  .skip-link:focus {
+  .epubsite-skip-link:focus {
     inset-inline-start: 0.5rem;
     inset-block-start: 0.5rem;
   }
@@ -561,11 +567,11 @@
    * only affordance available here — there is no accent colour to mark it with —
    * and inherit, rather than `--shell-fg`, so it still reads as one line.
    *
-   * `margin-block-start: auto` is deliberately absent: this sits in `#epub-content`,
+   * `margin-block-start: auto` is deliberately absent: this sits in `#epubsite-content`,
    * a scrolling pane, and pushing it to the pane's bottom would move it away from
    * the text it belongs to the moment the description is long.
    */
-  .credit {
+  .epubsite-credit {
     margin-block-start: 2rem;
     padding-block-start: 0.75rem;
     border-block-start: 1px solid var(--shell-border);
@@ -573,7 +579,7 @@
     font-size: 0.85rem;
   }
 
-  .credit a {
+  .epubsite-credit a {
     color: inherit;
     text-decoration: underline;
     text-underline-offset: 2px;
@@ -586,7 +592,7 @@
    * in the narrow-view block — must be written the same way or they lose and the
    * button appears on every desktop.
    */
-  #toolbar #toc-toggle {
+  #epubsite-toolbar #epubsite-toc-toggle {
     display: none;
   }
 
@@ -611,11 +617,11 @@
       grid-template-columns: minmax(0, 1fr) !important;
     }
 
-    #frame {
+    #epubsite-frame {
       grid-column: 1;
     }
 
-    #toolbar #toc-toggle {
+    #epubsite-toolbar #epubsite-toc-toggle {
       display: inline-flex;
     }
 
@@ -623,14 +629,14 @@
      * The drawer starts below the toolbar, and that is the whole fix for "there
      * is no way to close it".
      *
-     * `#toc-toggle` lives in the toolbar — and the drawer used to span the full
+     * `#epubsite-toc-toggle` lives in the toolbar — and the drawer used to span the full
      * viewport height, so opening it painted over the very button that opened
      * it. The only way out was a page reload. Anchoring the panel below the
      * toolbar keeps the trigger reachable, so the same control closes it. No
      * second button, no Escape handler, no backdrop: one control and one boolean
      * cannot disagree with each other.
      */
-    #toc {
+    #epubsite-toc {
       position: fixed;
       inset-block-start: var(--shell-toolbar-height);
       inset-block-end: 0;
@@ -644,13 +650,13 @@
     /* One attribute drives the panel and the button, so they cannot disagree.
        Logical properties would be nicer here, but `translateX` has no logical
        equivalent that every target browser understands. */
-    html[data-drawer-open] #toc {
+    html[data-drawer-open] #epubsite-toc {
       transform: translateX(0);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    #toc {
+    #epubsite-toc {
       transition: none;
     }
   }

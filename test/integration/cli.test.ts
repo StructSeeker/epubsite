@@ -62,6 +62,7 @@ describe.skipIf(!existsSync(BIN))('epubsite CLI', () => {
     expect(result.code).toBe(0)
     expect(result.stdout).toContain('Usage')
     expect(result.stdout).toContain('--hosting <mode>')
+    expect(result.stdout).toContain('--content-style <s>')
     expect(result.stderr).toBe('')
   })
 
@@ -77,6 +78,13 @@ describe.skipIf(!existsSync(BIN))('epubsite CLI', () => {
     const result = await runCli([epub, '-o', out, '--hosting', 'rewrite'])
     expect(result.code).toBe(2)
     expect(result.stderr).toContain('hosting rewrite rules')
+  })
+
+  it('rejects an unknown --content-style value with exit 2, and names the flag', async () => {
+    const { epub, out } = await fixture()
+    const result = await runCli([epub, '-o', out, '--content-style', 'reader2'])
+    expect(result.code).toBe(2)
+    expect(result.stderr).toContain('--content-style must be one of book|reader')
   })
 
   it('reports a bad book as exit 3', async () => {

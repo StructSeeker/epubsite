@@ -57,7 +57,7 @@ export function syncChapter(context: ChapterSyncContext, key: string | null): vo
   // about the wrong document. Nothing replaces it: a chapter is deliberately
   // given no canonical at all, in either of its addresses (§7.5, §8.5).
   syncCanonical(false)
-  syncStyles(chapter, context.root)
+  syncStyles(chapter, context.root, context.data.readerStyles)
   // The chapter node is decorated with the addresses the reader actually arrived
   // at (§7.3). It happens here rather than in `syncJsonLd`, which stays a DOM-slot
   // module that knows nothing about URLs, and here rather than at build time,
@@ -84,7 +84,7 @@ function highlight(key: string | null): void {
   highlighted = null
   if (key === null) return
 
-  for (const link of document.querySelectorAll<HTMLElement>('#toc [data-key]')) {
+  for (const link of document.querySelectorAll<HTMLElement>('#epubsite-toc [data-key]')) {
     if (link.dataset.key !== key) continue
     link.setAttribute('aria-current', 'page')
     highlighted = link

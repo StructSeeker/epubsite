@@ -11,6 +11,17 @@ export type HostingMode = 'none' | '404' | 'rewrite' | 'all'
 export type JsonLdMode = 'full' | 'thin' | 'none'
 export type Theme = 'auto' | 'light' | 'dark'
 
+/**
+ * Whose stylesheet the reader applies to book content (§1.2, §5.5).
+ *
+ * `book` is the default and means what it always meant: the chapter's own
+ * styles are collected at build time and injected by the runtime. `reader`
+ * replaces them with one stylesheet the reader ships — a typographic default
+ * that follows `--theme` — which is a deliberate exception to §1.2's "the shell
+ * does not re-typeset the book", and is therefore opt-in.
+ */
+export type ContentStyle = 'book' | 'reader'
+
 export type BaseUrlForm = 'path' | 'absolute'
 
 export interface BaseUrl {
@@ -33,6 +44,8 @@ export interface BuildOptions {
   /** `--no-spa`: multi-page site only, no htmx. */
   spa: boolean
   theme: Theme
+  /** `--content-style`: whose stylesheet styles the book's content. */
+  contentStyle: ContentStyle
   clean: boolean
   force: boolean
   dryRun: boolean
@@ -52,6 +65,7 @@ export const DEFAULT_OPTIONS: BuildOptions = {
   search: false,
   spa: true,
   theme: 'auto',
+  contentStyle: 'book',
   clean: false,
   force: false,
   dryRun: false,
@@ -63,6 +77,7 @@ export const DEFAULT_OPTIONS: BuildOptions = {
 const HOSTING_MODES: readonly HostingMode[] = ['none', '404', 'rewrite', 'all']
 const JSON_LD_MODES: readonly JsonLdMode[] = ['full', 'thin', 'none']
 const THEMES: readonly Theme[] = ['auto', 'light', 'dark']
+const CONTENT_STYLES: readonly ContentStyle[] = ['book', 'reader']
 
 /**
  * Parses `--base-url` (spec §9).
@@ -121,6 +136,11 @@ export function resolveOptions(partial: Partial<BuildOptions> = {}): BuildOption
   }
   if (!THEMES.includes(merged.theme)) {
     throw new UsageError(`--theme must be one of ${THEMES.join('|')}, got ${merged.theme}`)
+  }
+  if (!CONTENT_STYLES.includes(merged.contentStyle)) {
+    throw new UsageError(
+      `--content-style must be one of ${CONTENT_STYLES.join('|')}, got ${merged.contentStyle}`,
+    )
   }
 
   return merged

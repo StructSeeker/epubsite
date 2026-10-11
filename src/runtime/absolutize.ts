@@ -9,7 +9,7 @@
  * Two decisions worth keeping:
  *
  *   - Links are marked with `data-shell` rather than selected by CSS. A selector
- *     like `#toc a` silently misses the next shell link someone adds, and the
+ *     like `#epubsite-toc a` silently misses the next shell link someone adds, and the
  *     failure appears only after a navigation, on a page nobody tested.
  *   - `setAttribute` is used rather than `a.href =`, so the content attribute and
  *     the IDL property stay in sync. Assigning `a.href` rewrites only the

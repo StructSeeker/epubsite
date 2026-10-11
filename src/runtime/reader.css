@@ -1,0 +1,234 @@
+/*
+ * The reader's own stylesheet for book content (spec §1.2, §5.5, §5.8).
+ *
+ * It is applied **instead of** the book's stylesheets, and only when the build
+ * was asked for it (`--content-style reader`). The build reads this file, embeds
+ * it in `shell-data.json`, and the runtime injects it into `<head>` exactly like
+ * a chapter's inline `<style>` — wrapped in `@layer epub`, so the shell's own
+ * rules still win every conflict. That is deliberate: the measure, the leading,
+ * the pane padding and the media sizing are the shell's layout invariants (§5.10),
+ * and a typographic default must not be able to undo them.
+ *
+ * Three rules shape everything below.
+ *
+ * **Every selector is scoped to the content pane.** The sheet is live for as long
+ * as a chapter is, and the document also holds the shell's chrome — the sidebar
+ * with its `<ol>`s, `<a>`s and landmarks `<h2>`, the toolbar's `<button>`s. Layer
+ * order settles conflicts only on properties the shell declares, so an unscoped
+ * `h2 { margin-block-start: 1.6em }` would push the sidebar's landmarks heading
+ * around. Scoping is also self-documenting: this file styles the book, nothing
+ * else.
+ *
+ * **Colours come from the shell's palette, never from literals.** `--shell-surface`,
+ * `--shell-border` and `--shell-muted` are `light-dark()` pairs pinned by
+ * `--theme` on `:root`, so the reader's default typography follows the reader's
+ * theme instead of fighting it. This is also why body text declares no colour at
+ * all: it inherits the theme-aware colour from `<body>`, and a second palette
+ * here would be a second palette to drift.
+ *
+ * **Logical properties throughout.** A book may be `dir="rtl"`; `margin-inline-start`
+ * follows it and `margin-left` does not (§12).
+ *
+ * Deliberately absent, each for a reason:
+ *
+ *   - **No `overflow` on `pre`.** A code block whose lines are too wide scrolls
+ *     with the pane. Giving it its own scrollbar nests one scrollbar inside
+ *     another, and the earlier attempt to hand overflow to a hand-picked list of
+ *     wide elements (`pre`, `table`) lasted one book: Apress puts its code in
+ *     `<div class="ProgramCode">`, which the list did not mention, and the ends of
+ *     long lines became unreachable. The pane scrolls (§5.10, and the note in
+ *     `shell.css`).
+ *   - **No `img` rule.** The shell already declares `max-width: 100%; height: auto`
+ *     for book media in a stronger layer; repeating it here would be bytes saying
+ *     nothing.
+ *   - **No `!important`.** Nothing needs it inside `@layer epub`, and a default
+ *     that has to shout is not a default.
+ */
+
+#epubsite-content {
+  /*
+   * The platform's reading serif, with a broad fallback chain. Content gets a
+   * serif and the chrome keeps the sans stack: they are different jobs, and a
+   * reader that typesets a book in a UI font is the one thing this output is
+   * meant to avoid. The size is deliberately **not** set — the pane's measure is
+   * `65ch`, so it scales with whatever the reader's own base size is.
+   */
+  font-family: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+}
+
+/* Headings are sized in `em`, so they keep their proportions at any base size. */
+#epubsite-content :is(h1, h2, h3, h4, h5, h6) {
+  margin-block: 1.6em 0.6em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+#epubsite-content h1 {
+  font-size: 1.75em;
+}
+
+#epubsite-content h2 {
+  font-size: 1.45em;
+}
+
+#epubsite-content h3 {
+  font-size: 1.2em;
+}
+
+#epubsite-content h4 {
+  font-size: 1.05em;
+}
+
+#epubsite-content h5,
+#epubsite-content h6 {
+  font-size: 0.95em;
+}
+
+/*
+ * A chapter that opens with a heading should open with that heading, not with
+ * 1.6em of nothing above it.
+ */
+#epubsite-content > :first-child {
+  margin-block-start: 0;
+}
+
+/*
+ * Paragraphs are separated by space rather than by a first-line indent. Both are
+ * conventions; this one survives the one thing this stylesheet cannot know —
+ * whether the book's own markup uses `<p>` for body text or for verse and
+ * captions, where an indent would be wrong.
+ */
+#epubsite-content p {
+  margin-block: 0 0.9em;
+}
+
+#epubsite-content blockquote {
+  margin-block: 1em;
+  margin-inline: 0;
+  padding-inline-start: 0.9em;
+  border-inline-start: 3px solid var(--shell-border);
+}
+
+#epubsite-content :is(ul, ol) {
+  margin-block: 0 1em;
+  padding-inline-start: 1.4em;
+}
+
+#epubsite-content li {
+  margin-block: 0.2em;
+}
+
+/* A nested list inherits the outer paragraph's bottom margin otherwise, which
+   makes the last item of a sub-list look like the end of the section. */
+#epubsite-content li > :is(ul, ol) {
+  margin-block-end: 0;
+}
+
+#epubsite-content dt {
+  margin-block-start: 0.8em;
+  font-weight: 600;
+}
+
+#epubsite-content dd {
+  margin-inline-start: 1.4em;
+  margin-block: 0 0.6em;
+}
+
+#epubsite-content caption {
+  margin-block-end: 0.4em;
+  color: var(--shell-muted);
+  font-size: 0.9em;
+}
+
+#epubsite-content :is(pre, code, kbd, samp) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.9em;
+}
+
+/*
+ * `code` inside `pre` would otherwise multiply the size down to 0.81em. Resetting
+ * it is one rule and one real trap: nested `em` sizes compound, and the result
+ * looks like a deliberate hierarchy nobody chose.
+ */
+#epubsite-content pre :is(code, kbd, samp) {
+  font-size: inherit;
+}
+
+#epubsite-content pre {
+  margin-block: 1em;
+  padding: 0.7em 0.9em;
+  border: 1px solid var(--shell-border);
+  border-radius: 4px;
+  background: var(--shell-surface);
+}
+
+#epubsite-content table {
+  margin-block: 1em;
+  border-collapse: collapse;
+}
+
+/*
+ * `start` rather than `center`: a header cell's alignment should follow the
+ * book's direction, not the browser's historical default for `th`.
+ */
+#epubsite-content :is(th, td) {
+  padding: 0.3em 0.6em;
+  border: 1px solid var(--shell-border);
+  text-align: start;
+}
+
+#epubsite-content th {
+  background: var(--shell-surface);
+  font-weight: 600;
+}
+
+#epubsite-content figure {
+  margin-block: 1.2em;
+  margin-inline: 0;
+}
+
+#epubsite-content figcaption {
+  margin-block-start: 0.4em;
+  color: var(--shell-muted);
+  font-size: 0.9em;
+}
+
+#epubsite-content hr {
+  margin-block: 2em;
+  border: 0;
+  border-block-start: 1px solid var(--shell-border);
+}
+
+/*
+ * Links inherit the text colour and are marked by the underline alone. There is
+ * no accent colour in the palette to spend here, and inventing one would put a
+ * sixth colour into a scheme whose whole point is that light and dark are one
+ * declaration each.
+ */
+#epubsite-content a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+#epubsite-content small {
+  font-size: 0.85em;
+}
+
+/* Without this a footnote marker or an exponent grows the line box it sits in,
+   and a page of them reads as if the leading were broken. */
+#epubsite-content :is(sub, sup) {
+  line-height: 0;
+}
+
+#epubsite-content abbr[title] {
+  text-decoration: underline dotted;
+  cursor: help;
+}
+
+/* The browser's own highlight is a light-mode yellow, which is unreadable on the
+   dark theme's ink. `--shell-current` is the palette's mid-tone and follows it. */
+#epubsite-content mark {
+  background: var(--shell-current);
+  color: inherit;
+}

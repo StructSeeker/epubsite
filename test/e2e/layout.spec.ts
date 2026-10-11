@@ -4,12 +4,13 @@
  * These are regression tests for four defects that all had **one** cause, and the
  * cause is worth stating because none of the four symptoms points at it.
  *
- * `body` is a two-column grid holding `#toc` and `#frame`. It declared no
- * `grid-template-rows`, so the single row was implicit and `auto` — content-sized.
- * `#frame` then asked for `height: 100%` against a row whose height came from its
- * own contents: a cyclic reference, which CSS resolves by treating the percentage
- * as `auto`. So `#frame` grew to whatever the chapter was tall, `1fr` inside it
- * had nothing to distribute, and `#epub-content`'s `overflow: auto` never engaged.
+ * `body` is a two-column grid holding `#epubsite-toc` and `#epubsite-frame`. It
+ * declared no `grid-template-rows`, so the single row was implicit and `auto` —
+ * content-sized. `#epubsite-frame` then asked for `height: 100%` against a row
+ * whose height came from its own contents: a cyclic reference, which CSS resolves
+ * by treating the percentage as `auto`. So the frame grew to whatever the chapter
+ * was tall, `1fr` inside it had nothing to distribute, and `#epubsite-content`'s
+ * `overflow: auto` never engaged.
  *
  * On the landing page, which is short, the row happened to stretch to the viewport
  * and everything looked right. Every symptom appeared only with a chapter long
@@ -158,10 +159,10 @@ async function measure(page: Page): Promise<Layout> {
       bodyScrollHeight: document.body.scrollHeight,
       bodyScrollTop: Math.round(document.body.scrollTop),
       toolbarY: Math.round(
-        (document.querySelector('#toolbar') as HTMLElement).getBoundingClientRect().y,
+        (document.querySelector('#epubsite-toolbar') as HTMLElement).getBoundingClientRect().y,
       ),
-      content: pane('#epub-content'),
-      toc: pane('#toc'),
+      content: pane('#epubsite-content'),
+      toc: pane('#epubsite-toc'),
     }
   })
 }
@@ -179,9 +180,9 @@ async function openTallChapter(page: Page, width = 1280): Promise<Layout> {
   // a property of the machine's frame pacing rather than of this code, and it
   // starves when a second suite runs at the same time — `prepublishOnly` runs the
   // whole browser suite, so publishing while testing is enough to cause it.
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]', { force: true })
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]', { force: true })
   await page.waitForFunction(
-    () => (document.querySelector('#epub-content')?.textContent ?? '').includes('The very last'),
+    () => (document.querySelector('#epubsite-content')?.textContent ?? '').includes('The very last'),
   )
   return measure(page)
 }
@@ -231,7 +232,7 @@ test('the sidebar and the chapter scroll independently', async ({ page }) => {
   await openTallChapter(page)
 
   await page.evaluate(() => {
-    ;(document.querySelector('#epub-content') as HTMLElement).scrollTop = 4000
+    ;(document.querySelector('#epubsite-content') as HTMLElement).scrollTop = 4000
   })
   const afterContent = await measure(page)
   expect(afterContent.content.scrollTop).toBeGreaterThan(0)
@@ -239,7 +240,7 @@ test('the sidebar and the chapter scroll independently', async ({ page }) => {
   expect(afterContent.toc.scrollTop).toBe(0)
 
   await page.evaluate(() => {
-    ;(document.querySelector('#toc') as HTMLElement).scrollTop = 500
+    ;(document.querySelector('#epubsite-toc') as HTMLElement).scrollTop = 500
   })
   const afterToc = await measure(page)
   expect(afterToc.toc.scrollTop).toBeGreaterThan(0)
@@ -262,12 +263,12 @@ test('the chapter pane never outgrows the viewport, so the right margin survives
     // these widths the sidebar is a closed drawer and its links are off-screen.
     await page.goto(`${baseURL}/epubsite.html?p=%2FOEBPS%2Ftext%2Fch01.xhtml`)
     await page.waitForFunction(
-      () => (document.querySelector('#epub-content')?.textContent ?? '').includes('The very last'),
+      () => (document.querySelector('#epubsite-content')?.textContent ?? '').includes('The very last'),
     )
 
     const geometry = await page.evaluate(() => {
-      const pane = document.querySelector('#epub-content') as HTMLElement
-      const frame = document.querySelector('#frame') as HTMLElement
+      const pane = document.querySelector('#epubsite-content') as HTMLElement
+      const frame = document.querySelector('#epubsite-frame') as HTMLElement
       return {
         paneRight: pane.getBoundingClientRect().right,
         frameRight: frame.getBoundingClientRect().right,
@@ -302,7 +303,7 @@ test('an overflowing toolbar scrolls instead of hiding its controls (§5.10)', a
   await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
 
   const geometry = await page.evaluate(() => {
-    const toolbar = document.getElementById('toolbar') as HTMLElement
+    const toolbar = document.getElementById('epubsite-toolbar') as HTMLElement
     const style = getComputedStyle(toolbar)
     const controls = [...toolbar.querySelectorAll('a[id], button')]
     return {
@@ -331,10 +332,10 @@ test('an overflowing toolbar scrolls instead of hiding its controls (§5.10)', a
   // and checking the box is the honest question: `toBeVisible()` passes for an
   // element painted past its container's edge.
   const reachable = await page.evaluate(() => {
-    const toolbar = document.getElementById('toolbar') as HTMLElement
+    const toolbar = document.getElementById('epubsite-toolbar') as HTMLElement
     toolbar.scrollLeft = toolbar.scrollWidth
     const bar = toolbar.getBoundingClientRect()
-    const control = (document.getElementById('share') as HTMLElement).getBoundingClientRect()
+    const control = (document.getElementById('epubsite-share') as HTMLElement).getBoundingClientRect()
     return {
       scrolled: toolbar.scrollLeft,
       inside: control.left >= bar.left - 0.5 && control.right <= bar.right + 0.5,
@@ -364,29 +365,29 @@ test.describe('the search modal', () => {
     await page.setViewportSize({ width, height: 800 })
     await page.goto(`${baseURL}/epubsite.html`)
     await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
-    await page.click('#search-open')
+    await page.click('#epubsite-search-open')
     // The bundle is loaded lazily, so the modal appears a beat after the click.
-    await expect(page.locator('#search-modal dialog')).toHaveAttribute('open', '')
+    await expect(page.locator('#epubsite-search-modal dialog')).toHaveAttribute('open', '')
   }
 
   for (const width of [1280, 500]) {
     test(`has a visible control that closes it at ${width}px`, async ({ page }) => {
       await openSearch(page, width)
 
-      const close = page.locator('#search-modal .pf-modal-close')
+      const close = page.locator('#epubsite-search-modal .pf-modal-close')
       await expect(close).toBeVisible()
 
       // Visible is not the same as clickable: a control painted over by something
       // else is still "visible" to Playwright's first check.
       await close.click()
-      await expect(page.locator('#search-modal dialog')).not.toHaveAttribute('open', '')
+      await expect(page.locator('#epubsite-search-modal dialog')).not.toHaveAttribute('open', '')
     })
   }
 
   test('still closes on Escape, which is the component’s own binding', async ({ page }) => {
     await openSearch(page, 1280)
     await page.keyboard.press('Escape')
-    await expect(page.locator('#search-modal dialog')).not.toHaveAttribute('open', '')
+    await expect(page.locator('#epubsite-search-modal dialog')).not.toHaveAttribute('open', '')
   })
 })
 
@@ -409,7 +410,7 @@ test('a copy attempt reports itself without destroying the icon', async ({ page 
   await page.goto(`${baseURL}/epubsite.html`)
   await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
 
-  const button = page.locator('#share')
+  const button = page.locator('#epubsite-share')
   await button.click()
 
   // The message used to be written into the button's text. For a symbol button
@@ -439,12 +440,12 @@ test('the toolbar symbols are controls with accessible names, not text', async (
   // Home is an `<a>` rather than a `<button>` — it navigates — so each control is
   // asked the same three questions and the tag name is deliberately not asserted.
   for (const { selector, name } of [
-    { selector: '#search-open', name: 'Search this book' },
-    { selector: '#share', name: 'Copy a link to this book' },
-    { selector: '#toc-collapse', name: 'Collapse all sections' },
-    { selector: '#home', name: "Back to the book's home page" },
-    { selector: '#prev', name: 'Previous chapter' },
-    { selector: '#next', name: 'Next chapter' },
+    { selector: '#epubsite-search-open', name: 'Search this book' },
+    { selector: '#epubsite-share', name: 'Copy a link to this book' },
+    { selector: '#epubsite-toc-collapse', name: 'Collapse all sections' },
+    { selector: '#epubsite-home', name: "Back to the book's home page" },
+    { selector: '#epubsite-prev', name: 'Previous chapter' },
+    { selector: '#epubsite-next', name: 'Next chapter' },
   ]) {
     const control = page.locator(selector)
     await expect(control).toHaveAttribute('aria-label', name)
@@ -457,7 +458,7 @@ test('the toolbar symbols are controls with accessible names, not text', async (
   // is checked where it exists. It used to say "Contents"; the word moved into its
   // accessible name, which is the only reason it can be drawn as a symbol at all.
   await page.setViewportSize({ width: 500, height: 800 })
-  const toggle = page.locator('#toc-toggle')
+  const toggle = page.locator('#epubsite-toc-toggle')
   await expect(toggle).toBeVisible()
   await expect(toggle).toHaveAttribute('aria-label', 'Contents')
   await expect(toggle.locator('svg')).toBeVisible()
@@ -479,14 +480,14 @@ test('an 11-inch tablet is narrow in portrait and wide in landscape', async ({ p
     await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
 
     const drawerX = (): Promise<number> =>
-      page.evaluate(() => (document.querySelector('#toc') as HTMLElement).getBoundingClientRect().x)
+      page.evaluate(() => (document.querySelector('#epubsite-toc') as HTMLElement).getBoundingClientRect().x)
 
     if (narrow) {
-      await expect(page.locator('#toc-toggle'), `at ${width}px`).toBeVisible()
+      await expect(page.locator('#epubsite-toc-toggle'), `at ${width}px`).toBeVisible()
       // The drawer exists but is off-screen until asked for.
       await expect.poll(drawerX).toBeLessThan(0)
     } else {
-      await expect(page.locator('#toc-toggle'), `at ${width}px`).toBeHidden()
+      await expect(page.locator('#epubsite-toc-toggle'), `at ${width}px`).toBeHidden()
       await expect.poll(drawerX).toBe(0)
     }
   }
@@ -507,10 +508,10 @@ test.describe('collapsible sections', () => {
 
   /** The nested `<ol>` of the branch whose label is `Tall`. */
   const nested = (page: Page) =>
-    page.locator('#toc [data-toc-branch]').first().locator('> ol')
+    page.locator('#epubsite-toc [data-toc-branch]').first().locator('> ol')
 
-  const branch = (page: Page) => page.locator('#toc [data-toc-branch]').first()
-  const disclosure = (page: Page) => branch(page).locator('.toc-disclosure')
+  const branch = (page: Page) => page.locator('#epubsite-toc [data-toc-branch]').first()
+  const disclosure = (page: Page) => branch(page).locator('.epubsite-toc-disclosure')
 
   test('a section hides and reveals its children', async ({ page }) => {
     await ready(page)
@@ -536,7 +537,7 @@ test.describe('collapsible sections', () => {
   test('collapse all folds every branch, and expands them again', async ({ page }) => {
     await ready(page)
 
-    const all = page.locator('#toc-collapse')
+    const all = page.locator('#epubsite-toc-collapse')
     await expect(all).toHaveAttribute('aria-label', 'Collapse all sections')
 
     await all.click()
@@ -545,7 +546,7 @@ test.describe('collapsible sections', () => {
     // while leaving later sections open.
     const collapsed = await page.evaluate(
       () =>
-        [...document.querySelectorAll('#toc [data-toc-branch]')].every(
+        [...document.querySelectorAll('#epubsite-toc [data-toc-branch]')].every(
           (item) => item.getAttribute('data-collapsed') === 'true',
         ),
     )
@@ -563,7 +564,7 @@ test.describe('collapsible sections', () => {
   test('arriving at a chapter reveals the branch that contains it', async ({ page }) => {
     await ready(page)
 
-    await page.locator('#toc-collapse').click()
+    await page.locator('#epubsite-toc-collapse').click()
     await expect(nested(page)).toBeHidden()
 
     // "Tall" is the branch, so its own label survives collapsing; what re-opening
@@ -576,7 +577,7 @@ test.describe('collapsible sections', () => {
     // is the sidebar losing its only job.
     await expect(branch(page)).toHaveAttribute('data-collapsed', 'false')
     await expect(nested(page)).toBeVisible()
-    await expect(page.locator('#toc [aria-current="page"]')).toBeVisible()
+    await expect(page.locator('#epubsite-toc [aria-current="page"]')).toBeVisible()
   })
 })
 
@@ -586,7 +587,7 @@ test('Copy link works on the landing page, before any chapter is open', async ({
   await page.goto(`${baseURL}/epubsite.html`)
   await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
 
-  const button = page.locator('#share')
+  const button = page.locator('#epubsite-share')
   await expect(button).toBeEnabled()
   await button.click()
 
@@ -603,21 +604,21 @@ test('a chapter opens at its own top when the URL names no anchor', async ({ pag
 
   const paneScrollTop = (): Promise<number> =>
     page.evaluate(() =>
-      Math.round((document.querySelector('#epub-content') as HTMLElement).scrollTop),
+      Math.round((document.querySelector('#epubsite-content') as HTMLElement).scrollTop),
     )
 
   // Read partway down the long chapter…
-  await page.click('#toc a[data-key="OEBPS/text/ch01.xhtml"]', { force: true })
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch01.xhtml"]', { force: true })
   await page.waitForFunction(() =>
-    (document.querySelector('#epub-content')?.textContent ?? '').includes('The very last'),
+    (document.querySelector('#epubsite-content')?.textContent ?? '').includes('The very last'),
   )
   await page.evaluate(() => {
-    ;(document.querySelector('#epub-content') as HTMLElement).scrollTop = 3000
+    ;(document.querySelector('#epubsite-content') as HTMLElement).scrollTop = 3000
   })
   await expect.poll(paneScrollTop).toBeGreaterThan(0)
 
   // …then open a different chapter, whose URL names no anchor.
-  await page.click('#toc a[data-key="OEBPS/text/ch02.xhtml"]', { force: true })
+  await page.click('#epubsite-toc a[data-key="OEBPS/text/ch02.xhtml"]', { force: true })
   await page.waitForFunction(() => document.title === 'Short')
 
   expect(new URL(page.url()).hash).toBe('')
@@ -650,7 +651,7 @@ test('the favicon survives the document URL moving', async ({ page }) => {
  * The narrow-screen drawer.
  *
  * The defect: the drawer is an overlay spanning the full viewport height, and
- * `#toc-toggle` lives in the toolbar — so opening the drawer painted over the
+ * `#epubsite-toc-toggle` lives in the toolbar — so opening the drawer painted over the
  * very button that opened it, leaving no way to close it but a page reload.
  *
  * The fix is geometric, not another control: the panel starts below the toolbar,
@@ -687,7 +688,7 @@ test.describe('the mobile drawer', () => {
   /** The panel's settled position — `0` open, off-screen left when closed. */
   async function drawerX(page: Page): Promise<number> {
     return page.evaluate(
-      () => (document.querySelector('#toc') as HTMLElement).getBoundingClientRect().x,
+      () => (document.querySelector('#epubsite-toc') as HTMLElement).getBoundingClientRect().x,
     )
   }
 
@@ -704,36 +705,36 @@ test.describe('the mobile drawer', () => {
 
   test('opens from the toggle', async ({ page }) => {
     await gotoNarrow(page)
-    await page.click('#toc-toggle')
+    await page.click('#epubsite-toc-toggle')
     await expectDrawer(page, 'open')
   })
 
   test('closes from the same toggle that opened it', async ({ page }) => {
     await gotoNarrow(page)
-    await page.click('#toc-toggle')
+    await page.click('#epubsite-toc-toggle')
     await expectDrawer(page, 'open')
 
     // The assertion the bug would have failed: with the drawer open, a click at
     // the toggle's centre must still land on the toggle.
-    expect(await isHitTestable(page, '#toc-toggle')).toBe(true)
+    expect(await isHitTestable(page, '#epubsite-toc-toggle')).toBe(true)
 
-    await page.click('#toc-toggle')
+    await page.click('#epubsite-toc-toggle')
     await expectDrawer(page, 'closed')
   })
 
   test('leaves the whole toolbar reachable while it is open', async ({ page }) => {
     await gotoNarrow(page)
-    await page.click('#toc-toggle')
+    await page.click('#epubsite-toc-toggle')
     await expectDrawer(page, 'open')
 
-    for (const control of ['#toc-toggle', '#book-title', '#home', '#prev', '#next']) {
+    for (const control of ['#epubsite-toc-toggle', '#epubsite-book-title', '#epubsite-home', '#epubsite-prev', '#epubsite-next']) {
       expect(await isHitTestable(page, control), `${control} is covered`).toBe(true)
     }
   })
 
   test('reports its state on the toggle', async ({ page }) => {
     await gotoNarrow(page)
-    const toggle = page.locator('#toc-toggle')
+    const toggle = page.locator('#epubsite-toc-toggle')
 
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
     await toggle.click()
@@ -749,7 +750,7 @@ test.describe('the mobile drawer', () => {
 
     // The sidebar is permanent chrome here, so the toggle is not a control the
     // reader has: it must not be visible, and it must not have opened anything.
-    await expect(page.locator('#toc-toggle')).toBeHidden()
+    await expect(page.locator('#epubsite-toc-toggle')).toBeHidden()
     await expect(page.locator('html')).not.toHaveAttribute('data-drawer-open', '')
     expect(await drawerX(page)).toBe(0)
   })

@@ -14,6 +14,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 /** @type {ReadonlyArray<readonly [string, string]>} */
 const jobs = [
   ['src/runtime/shell.css', 'build/runtime/shell.css'],
+  // Not published to the site as a file: the build reads it and embeds it in
+  // `shell-data.json`, because the runtime has to be able to remove it again
+  // when the reader returns to the landing page (`--content-style reader`).
+  ['src/runtime/reader.css', 'build/runtime/reader.css'],
   ['src/runtime/icon.svg', 'build/runtime/icon.svg'],
   // CC BY 4.0 requires attribution, and it has to travel with the asset rather
   // than live only in the repository, or a published package ships the icon

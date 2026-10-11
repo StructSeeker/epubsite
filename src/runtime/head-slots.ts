@@ -21,6 +21,13 @@
  *      inline styles are wrapped in `@layer epub { … }`. The book's own top-level
  *      imports were lifted out at build time for exactly this reason (§4.4).
  *
+ *   3. **The reader's own stylesheet is one of these slots, not a special case.**
+ *      Under `--content-style reader` the build sends it in place of the book's
+ *      sheets and empties their arrays, so the swap costs this module nothing: it
+ *      is one more sheet in the same list, keyed `reader`, wrapped in the same
+ *      layer, and removed by the same `clearStyles` when the reader goes back to
+ *      the landing page (§5.5).
+ *
  * The diff is coarse on purpose. The key sequence is compared as a whole, and
  * when it differs the sheet is rebuilt from scratch. The case that matters is the
  * one this optimises for: re-entering the *same* chapter — history restore,
@@ -33,8 +40,8 @@ import type { ChapterData } from './data'
 const injected = new Map<string, HTMLStyleElement>()
 let currentSequence = ''
 
-export function syncStyles(chapter: ChapterData, root: URL): void {
-  const wanted = wantedSheets(chapter, root)
+export function syncStyles(chapter: ChapterData, root: URL, readerStyles: string | undefined): void {
+  const wanted = wantedSheets(chapter, root, readerStyles)
   const sequence = wanted.map((sheet) => sheet.key).join('\u0000')
   if (sequence === currentSequence) return
 
@@ -64,8 +71,22 @@ interface Sheet {
   css: string
 }
 
-function wantedSheets(chapter: ChapterData, root: URL): Sheet[] {
+function wantedSheets(
+  chapter: ChapterData,
+  root: URL,
+  readerStyles: string | undefined,
+): Sheet[] {
   const sheets: Sheet[] = []
+
+  // The reader's own sheet comes **first**, and the order is a rule rather than a
+  // detail of this loop: everything here lands in `@layer epub`, where later
+  // source wins, so a book sheet placed after it could refine it. Today the
+  // question does not arise — the build empties the book's arrays when it sends
+  // this — and it is written down so that "the reader's default *under* the
+  // book" stays a change on the build side alone.
+  if (readerStyles !== undefined) {
+    sheets.push({ key: 'reader', css: `@layer epub {${readerStyles}}` })
+  }
 
   // External stylesheets come first, because `@import` rules must precede other
   // rules within the stylesheet that contains them. Each one is its own
@@ -99,7 +120,7 @@ function cssUrl(url: string): string {
  * Injected into `<head>` rather than travelling with the swapped content, and
  * that is not a preference: `allowScriptTags = false` (§10) makes htmx discard
  * every `<script>` in a response — including `type="application/ld+json"` — so a
- * script that rode along inside `#epub-content` would simply never exist. An
+ * script that rode along inside `#epubsite-content` would simply never exist. An
  * element we create ourselves is not subject to that rule, which is how both the
  * security measure and the metadata get what they want.
  *
