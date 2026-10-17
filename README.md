@@ -44,6 +44,28 @@ surge . https://book-name-of-your-choice.surge.sh/
 
 ```
 
+### Package metadata
+
+The npm package is described by the root [`package.json`](./package.json).
+It requires **Node.js ≥ 20.11**, exposes the `epubsite` executable through
+`build/bin/epubsite.js`, and exposes the library API through
+`build/index.js` with TypeScript declarations at `build/index.d.ts`.
+
+The package publishes only the built artifacts, vendored browser assets,
+documentation, and license files:
+
+```text
+build/       compiled CLI, library, and browser runtime
+vendor/      vendored htmx and its license
+README.md
+LICENSE
+```
+
+The root `package.json` is also exported as `epubsite/package.json`, so tools
+can inspect the installed package metadata without relying on the caller's
+working directory. Runtime dependencies are limited to `htmlparser2` and
+`yauzl`; Pagefind is an external tool used only when `--search` is requested.
+
 ---
 
 ## Usage
@@ -143,6 +165,7 @@ epubsite moby-dick.epub --dry-run --json | jq '.stats'
 | `--search` | off | Build a Pagefind full-text index. |
 | `--pagefind <path>` | auto | Explicit Pagefind binary. |
 | `--no-spa` | | Multi-page site only — do not inject htmx. Every chapter link becomes a normal page load. |
+| `--pwa <bool>` | `true` | `true` emits an installable offline PWA with a manifest and service worker; `false` omits all PWA output. |
 | `--theme <t>` | `auto` | `auto` \| `light` \| `dark`. |
 | `--content-style <s>` | `book` | `book` \| `reader`. `reader` drops the book's own stylesheets and typesets its content with the reader's default, which follows `--theme`. See [The reader's own style](#the-readers-own-style). |
 | `--clean` | off | Delete the output directory first. |
@@ -154,6 +177,11 @@ epubsite moby-dick.epub --dry-run --json | jq '.stats'
 | `-v, --version` | | Version. |
 
 `serve` additionally accepts `--port <n>` (default `8080`; `0` picks a free port).
+
+PWA output is enabled by default. The generated service worker precaches the
+completed site, including a Pagefind index when `--search` produces one, so the
+reader remains available offline after its first load. Use `--pwa false` for a
+plain static site with no manifest, registration script, or service worker.
 
 **Stream discipline:** the build result goes to **stdout**; warnings, errors and
 progress go to **stderr**. `epubsite book.epub > result.json` is safe.

@@ -8,7 +8,7 @@
 <blockquote>
 <p><b>本版是一次重写，不是增补。</b>v1.1 与 v1.2 从此冻结。v1.2 把改动记在文末附录 E 里，导致读者必须把正文和补丁表叠着读才能知道系统到底是什么样；v1.3 把 E.1–E.12 全部并入正文，并补齐了 v1.2 完全没写的那一类事实——<b>布局</b>：壳是一个两面板视口，它的正确性有自己的一组不变量，而这些不变量在实现中逐条以缺陷的形式暴露过。</p>
 <p>§1–§14 与附录 A–D 的<b>编号保持不变</b>，因为源码与测试里有大量形如「§5.4.3」「§8.2」「§D.2」的引用。新增内容一律追加到所在章的末尾（§1.4、§4.9、§5.9、§5.10、§5.11、§5.12、§5.13、§5.14、§11.3），不改动既有编号。附录 E 保留为 v1.2 的历史记录，本版的修订记在附录 F。</p>
-<p><b>唯一例外：</b>章节节点的 <code>url</code> 改为数组之后，§5.8、§7.3、§7.5、§8.5 里原来说「令牌路径只用于剪贴板」的那几处断言不再成立，因此在<b>原地改写</b>。编号未动，改的是内容——把一段已被推翻的话留在原处，比改动它更糟。此后另有六处按同一条规则就地改写：<b>canonical 只属于落地页</b>（§4.6、§5.4、§5.6、§7.5、§8.5、§9）、<b>工具栏的首页控件与符号化的目录开关</b>（§5.1、§5.7、§5.11、§11.1）、<b>落地页末尾的致谢行</b>（§4.6、§5.1、§11.1、§13.2）、<b>按 spine 阅读顺序翻页的上/下一页</b>（§5.1、§5.4、§5.7、<b>§5.12</b>、§7.5、§12、§13.2）、<b>工具栏横向可滚</b>（§5.10、§11.3、§13.2），以及<b>标识符照抄而非派生</b>（<b>§7.4</b>、§7.5、§7.7、§12、§12.1）。此后又有两处：<b>壳的类名与 id 命名空间</b>（§1.3、§5.1、§5.3、§5.7、§5.10、§5.11、§5.12、<b>§5.13</b>、§11.1、§11.2）与<b>阅读器自己的内容样式</b>（§1.2、§5.4、§5.5、<b>§5.14</b>、§9、§11.2、§12、A.2）——两者都已落地实现，因此原地改写不是选择而是必需。八处都记在附录 F。</p>
+<p><b>唯一例外：</b>章节节点的 <code>url</code> 改为数组之后，§5.8、§7.3、§7.5、§8.5 里原来说「令牌路径只用于剪贴板」的那几处断言不再成立，因此在<b>原地改写</b>。编号未动，改的是内容——把一段已被推翻的话留在原处，比改动它更糟。此后另有六处按同一条规则就地改写：<b>canonical 只属于落地页</b>（§4.6、§5.4、§5.6、§7.5、§8.5、§9）、<b>工具栏的首页控件与符号化的目录开关</b>（§5.1、§5.7、§5.11、§11.1）、<b>落地页末尾的致谢行</b>（§4.6、§5.1、§11.1、§13.2）、<b>按 spine 阅读顺序翻页的上/下一页</b>（§5.1、§5.4、§5.7、<b>§5.12</b>、§7.5、§12、§13.2）、<b>工具栏横向可滚</b>（§5.10、§11.3、§13.2），以及<b>标识符照抄而非派生</b>（<b>§7.4</b>、§7.5、§7.7、§12、§12.1）。此后又有三处：<b>壳的类名与 id 命名空间</b>（§1.3、§5.1、§5.3、§5.7、§5.10、§5.11、§5.12、<b>§5.13</b>、§11.1、§11.2）、<b>阅读器自己的内容样式</b>（§1.2、§5.4、§5.5、<b>§5.14</b>、§9、§11.2、§12、A.2），以及<b>分享反馈所在的槽位</b>（<b>§5.8</b>、§5.10、§11.1）——三者都已落地实现，因此原地改写不是选择而是必需。九处都记在附录 F。</p>
 <p><b>词汇约定：</b>「必须」= 违反即为缺陷；「应当」= 有正当理由可偏离，但须在代码里说明；「可以」= 实现自由。</p>
 </blockquote>
 
@@ -341,6 +341,8 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <p>落地页上没有章节可令牌化，于是复制<b>阅读器自己的地址</b>——「这是这本书」。按钮<b>永不禁用</b>：一个首次使用时什么都不做的控件，读起来就是一个坏掉的控件。片段被保留，因为分享一条脚注引用就应该落到那条脚注上。</p>
 
+<p><b>结果的反馈写在一个状态元素里，不画在按钮上。</b>按钮的内容就是那个符号，往里写文字等于删掉图标；而把气泡画成按钮的 <code>::after</code> 在这里也做不到——工具栏的块轴是裁剪的（§5.10：它要能横向滚动），气泡定在工具栏盒子之外就会被切掉，读者什么也看不到（F.19）。因此消息落在 <code>#epubsite-flash</code> 上：它是 <code>&lt;body&gt;</code> 的子元素、用 <code>position: fixed</code> 锚在工具栏下方、带 <code>role="status"</code>，既逃出了裁剪，也变成一次真正的朗读——按钮是符号，结果本来就是这个控件唯一能说出的东西。元素在构建期就存在且为空，只在运行期被<b>更新</b>：一个在填充的同一刻才进入文档的实时区域不会被读出。1.5 秒后它清空自己。</p>
+
 <h3>5.9 检索运行期</h3>
 
 <p>按需加载：首次打开才取 Pagefind 的组件包（约 250 KB），大多数读者从不搜索。三个决定：</p>
@@ -425,7 +427,7 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 <ul>
 <li><b>id 保持 id，不改成 class。</b>符号控件那一组的宽度是两个 id，正是为了压过 <code>#epubsite-toolbar button</code>（id + 类型，§5.11）。换成类选择器会输给它，开关会在所有宽屏下现形——前缀改变的是名字，不是宽度，把 <code>#epubsite-toolbar</code> 写成一个类会静默推翻 §5.11 那条陷阱记录的修法。</li>
 <li><b>裸类型选择器的历史规模不变。</b><code>#epubsite-landmarks h2</code> 与 <code>#epubsite-toc a</code> 仍然是「id + 类型」，与重命名前一样。</li>
-<li><b><code>data-*</code> 标记不动。</b><code>data-shell</code>、<code>data-key</code>、<code>data-toc-branch</code>、<code>data-collapsed</code>、<code>data-drawer-open</code>、<code>data-flash</code> 是属性而非类，书的样式表几乎不可能按它们选择；而 <code>data-shell</code> 是 §5.3 的承重标记，改名的收益是零、风险是漏改一处。</li>
+<li><b><code>data-*</code> 标记不动。</b><code>data-shell</code>、<code>data-key</code>、<code>data-toc-branch</code>、<code>data-collapsed</code>、<code>data-drawer-open</code> 是属性而非类，书的样式表几乎不可能按它们选择；而 <code>data-shell</code> 是 §5.3 的承重标记，改名的收益是零、风险是漏改一处。</li>
 <li><b>别人的名字一个都不碰。</b><code>.htmx-indicator</code>/<code>.htmx-request</code> 是 htmx 按名字找元素的开关，<code>.pf-modal-close</code> 与 <code>.pagefind-ui__*</code> 属于 Pagefind 组件（§5.9、I7）。前缀规则只管我们输出的名字。</li>
 </ul>
 
@@ -660,7 +662,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <li><b>章节内容以脚本禁用方式插入。</b>托管出来的书不能在读者的会话里执行任意代码。</li>
 <li><b>zip 路径穿透</b>：最终防线委托给解包库（yauzl 的 <code>validateFileName</code>），并以测试钉住该行为，而不是再加一道永远跑不到的守卫。换解包库必须重新验证这两条断言。</li>
 <li><b><code>selfRequestsOnly</code></b>：htmx 不被允许向站外发请求。</li>
-<li><b>剪贴板失败要说出来</b>：剪贴板需要安全上下文与用户手势，两者在任何真实部署里都成立。一个看起来成功、实际什么都没复制的按钮，比一个承认失败的按钮更糟。</li>
+<li><b>剪贴板失败要说出来</b>：剪贴板需要安全上下文与用户手势，两者在任何真实部署里都成立。一个看起来成功、实际什么都没复制的按钮，比一个承认失败的按钮更糟。消息写在 <code>role="status"</code> 的状态元素里（§5.8），因此除了可见，也会被朗读——按钮本身是符号，没有文字可以更新。</li>
 </ul>
 
 ---
@@ -817,7 +819,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <h2>14. 实施阶段</h2>
 
-<p>P0–P8 全部完成并通过验证（§1.4）。此后附录 F 的八处就地修订（F.10–F.14、F.16–F.18）落地，全量验证：类型检查、lint 干净，单元 + 集成 <b>20 个文件 / 364 个测试</b>，端到端 <b>61 个</b>（60 通过，另 1 个是 I1 探针里按设计跳过的 <code>fixme</code>，真实 Chrome）。</p>
+<p>P0–P8 全部完成并通过验证（§1.4）。此后附录 F 的九处就地修订（F.10–F.14、F.16–F.19）落地，全量验证：类型检查、lint 干净，单元 + 集成 <b>20 个文件 / 365 个测试</b>，端到端 <b>61 个</b>（60 通过，另 1 个是 I1 探针里按设计跳过的 <code>fixme</code>，真实 Chrome）。</p>
 
 <table>
 <tr><th>阶段</th><th>内容</th></tr>
@@ -933,6 +935,12 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <p><code>shell.css</code> 与 <code>icon.svg</code> 由一段拷贝脚本放进 <code>build/runtime/</code>，构建期用 <code>runtimeAsset()</code> 定位。<b>资产定位靠 <code>import.meta.dirname</code> 而不是 <code>process.cwd()</code></b>：整个 <code>--out ./dist</code> 的意义就是 cwd 属于<i>调用者</i>，用它定位我们自己的资产会「在本仓库里能用、在别处全坏」。向上搜 <code>package.json</code> 而不是数 <code>..</code> 的层数——数层数是那种一加第三个入口就静默失效的算术。</p>
 
+<h4>C.4.1 <code>package.json</code> 是发布边界</h4>
+
+<p>根目录的 <code>package.json</code> 是 npm 包的唯一发布元数据来源。它必须声明 Node.js 引擎下限 <code>&gt;=20.11</code>、<code>epubsite</code> CLI 的 <code>bin</code> 入口 <code>build/bin/epubsite.js</code>、库入口 <code>build/index.js</code>、声明文件 <code>build/index.d.ts</code>，以及 <code>epubsite/package.json</code> 的显式导出。发布白名单 <code>files</code> 只包含 <code>build/</code>、<code>vendor/</code>、<code>README.md</code> 与 <code>LICENSE</code>；源码、测试、示例 EPUB 与构建脚本不属于发布物。</p>
+
+<p>依赖边界也由它表达：<code>htmlparser2</code> 与 <code>yauzl</code> 是运行期依赖；<code>htmx</code>、TypeScript、tsup、Vitest、Playwright 与 ESLint 仅是开发期依赖。Pagefind 不在任何依赖字段中，它是 <code>--search</code> 请求时才发现的外部工具。<code>scripts/copy-assets.mjs</code> 把运行期需要但 tsup 不会发出的 CSS、SVG、许可证与 PWA 注册脚本复制到 <code>build/runtime/</code>，因此 <code>npm pack</code> 后的 <code>files</code> 白名单与资产定位规则必须保持一致。</p>
+
 <h3>C.5 确定性与 diff 稳定性</h3>
 
 <p>不承诺跨运行字节一致（E.2）。承诺的是一组顺序纪律：显式排序、按 spine 序号回填、不把构建机绝对路径写进产物。目标是<b>diff 可读</b>。</p>
@@ -1042,6 +1050,7 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 <tr><td>F.16</td><td><b><code>@id</code> 照抄 <code>dc:identifier</code>，没有标识符时用标题的 slug；删掉 <code>W_IDENTIFIER_UNPARSEABLE</code></b>（§7.4、§7.5、§7.7、§12、§12.1）</td><td>旧规则把「不是 URN/ISBN/UUID/URL」的标识符取文本 SHA-256 前 16 位、装进自造的 <code>urn:epubsite:</code>，并发警告说「改文本即改身份」。它想要的是让 <code>@id</code> 保持合法 IRI，代价却是把身份从书手里拿走：五本 IDPF 样本里有四本的标识符不是 URN，于是四本书的身份都由我们计算，而 G7 要的恰好是身份来自书。本版把规则与警告一起删掉——<b>照抄</b>，例外只有两个：裸 ISBN 与裸 UUID 补前缀，因为补前缀无损、且让一个裸数字不再有歧义。顺带补上一个更旧的缺口：<code>identifier</code> 原先只写「第二条非 ISBN 标识符」，于是标识符不是 ISBN 的书一个 <code>identifier</code> 都没有——那正是四本样本的样子；现在它取<b>被选中</b>的那一条（§4.2），而同一数值仍不会同时落进 <code>isbn</code> 与 <code>identifier</code>。空标识符归入「没有标识符」：「没有」是事实，<code>@id: ""</code> 是假装有。标题替代者的 slug 规则也写进 §7.4，其中 <code>\p{M}</code>（分解形里的重音是组合记号）与不随区域设置变化的小写各对应一个会静默出错的细节。<b>E.13 的 URL 特例被本条吸收</b>：此后没有「URL 是特例」这回事，URL 只是照抄的一种。§12.1 的清单因此少一项，而它依旧被声明为完整清单</td></tr>
 <tr><td>F.17</td><td><b>新增 <code>--content-style book|reader</code>：阅读器可以完全不使用书的样式表</b>（§1.2、§5.4、§5.5、§5.14、§9、§11.2、§12、A.2）</td><td>本版之前有一个具体缺口，而不是一个理论缺口：<code>--theme</code> 只决定壳自己的调色板，书的正文则是书说了算——一本写死黑字白底的书，在深色主题下得到的是「深色外壳包着一张白纸」。填法不是给内容强加颜色（那会与 §1.2 冲突到底），而是承认有些出版商要的正是「用阅读器的排版」。于是新增一条选项，值为 <code>reader</code> 时：构建期不再把书的样式表写进 <code>shell-data.json</code>（每章的 <code>headStyles</code> 变成三个空数组，附带好处是书的 <code>&lt;style&gt;</code> 正文不再随产物传输），改为捬上一张阅读器自带的排版默认（<code>src/runtime/reader.css</code>）；运行期照旧往同一个槽位里注入，只是内容换了一张——因此运行期没有模式分支，层序也不变（§5.5：它仍在 <code>@layer epub</code>，仍输给 §5.10 的布局不变量）。三处实现细节各有理由：只做排版不做装饰，颜色一律从 <code>--shell-*</code> 令牌取（否则暗色主题下会出现第二套颜色在漂移）；所有选择器限定在内容区，因为这张表活着的时候侧边栏与工具栏也在同一个文档里；<code>pre</code> <b>不给</b> <code>overflow</code>，那是 F.14 已经量过的一条结论。承诺的边界也写明：它管的是<b>样式表</b>，书标记里的 <code>style="…"</code> 与 <code>align</code>/<code>bgcolor</code> 仍然是标记，零改写不允许我们动它们。无处生效时（<code>--no-spa</code>、固定版式书）退出码 2 并说明是哪一种——一张只能由壳应用的样式表，在没有壳时只能被无视，而这正是 §9 一直拒绝的那类失败。落地页不加提示：这是出版方自己的选择，不是书逼我们降级</td></tr>
 <tr><td>F.18</td><td><b>壳的类名与 id 一律加 <code>epubsite-</code> 前缀</b>（§5.1、§5.10、§5.11、§5.12、<b>§5.13</b>、§11.1、§11.2）</td><td>书的内容被交换进壳的<b>同一个文档</b>，书的样式表在章节显示期间也活着，于是「壳的选择器」与「书的标记」在同一棵树上求值，两个方向都会出事。方向一（书的规则打到壳）有一个具体到可以复述的后果：窄屏下壳自己的 <code>#toc</code> 规则是 <code>position: fixed</code> 的抽屉，因此书里一个普通的 <code>&lt;nav id="toc"&gt;</code> 会变成一块浮动的覆盖层——书自己的目录被阅读器的样式改造成了阅读器的控件；同一条规则还会让侧边栏本身消失。方向二（壳的规则打到书）是方向一的反面，而且更容易被忽略：壳在更强的层里（§5.5），所以书里同样叫 <code>.notice</code> 的告示块会拿到壳的左边框与底色——这不是书用错了名字，是壳越界了。修法只能是换词：加前缀，结构与层序一处不动。<b>两条容易被顺手做错的细节写进了 §5.13</b>：id 必须保持 id（符号控件那一组的宽度是两个 id，换成类选择器会输给 <code>#epubsite-toolbar button</code>，静默推翻 §5.11 那条陷阱记录的修法）；<code>data-*</code> 标记与第三方类名（<code>.htmx-indicator</code>、<code>.pf-modal-close</code>、<code>.pagefind-ui__*</code>）一律不碰。规则由测试守着：单元测试读 <code>shell.css</code> 断言每个类/id 选择器都带前缀（白名单只有那两个第三方名字，且要求它们确实出现，免得白名单变成垃圾桶），集成测试断言构建出的壳里每个 id/class 记号都带前缀、且壳自己属性里引用的 id 都真实存在——后者正是重命名最容易漏的一处。e2e 增加一本专门敌对的书（样式表把上面这些通用名字配 <code>display: none</code>），断言壳的面板、侧边栏、工具栏全都还在；同一份样式表对书自己的元素仍然生效，作为「确实加载了」的对照。顺带修掉一处与本题无关但同样会误导人的旧陈述：§11.2 写的断点 <code>40rem</code> 早已不是实现里的值（实现是 <code>52.5rem</code>，推导见 §5.10）。附录 F 里先前几行引用的壳选择器也一并改成了当前名字——它们描述的元素都还在，留着旧名只会让人按图索骥地扑空</td></tr>
+<tr><td>F.19</td><td><b>分享的反馈从按钮的 <code>::after</code> 移到工具栏之外的状态元素</b>（§5.8、§5.10、§5.11、§11.1）</td><td><b>这是一次回归，而成因值得写下来。</b>F.14 为了让工具栏横向可滚给它加了 <code>overflow-y: hidden</code>（那种组合下引擎把 <code>clip</code> 算成 <code>hidden</code>，§5.10 已记），于是工具栏成了一个<b>裁剪</b>容器；而「Link copied」当时是分享按钮的 <code>::after</code>、<code>position: absolute</code>、定位在按钮<b>下方</b>——整块落在工具栏盒子之外，被裁掉了。实测：按钮底边 40px、工具栏盒子到 52px、气泡从 46px 开始，只有底部内边距那一条 6px 露出，文字一个像素也看不见。<b>比缺陷本身更值得记的是它的测试</b>：那条 e2e 只断言按钮上有 <code>data-flash</code> 属性，而属性一直在——测试把一个看不见的反馈认证成了好的，F.7 的同一课再上一遍。修法不是把气泡挪几像素，而是承认「必须逃出容器裁剪的消息不能布在容器里」：改成 <code>&lt;body&gt;</code> 下的一个 <code>role="status"</code> 元素，<code>position: fixed</code> 锚在工具栏下方；<code>pointer-events: none</code> 让它永远不挡点击；空状态用 <code>opacity</code> 而不是 <code>display: none</code> 隐藏，因为一个在填充那一刻才进入文档的实时区域不会被读出。顺带两件事：消息不再是生成的伪内容，而是一次真正的朗读（按钮是符号，结果本来就是这个控件唯一能说出的东西）；该元素在内容面板之外，所以书的 <code>p { … }</code> 会够到它——这是 F.15 未决项中「类型选择器」那一条的第二个实例，因此它的排版属性全部显式声明，不靠继承。新的探测器三件套：断言元素存在且带 <code>role="status"</code>、断言它在 <code>&lt;/header&gt;</code> 之后（结构），以及<b>在浏览器里做命中测试</b>——<code>getBoundingClientRect</code> 与 Playwright 的可见性都不看祖先裁剪，只有「在气泡中心点 <code>elementFromPoint</code> 得到的就是它」这一句会红。实测：把元素放回旧结构后，盒仍在、属性仍在，命中结果却是内容面板，三条断言全红</td></tr>
 </table>
 
 <h3>F.15 未决项</h3>

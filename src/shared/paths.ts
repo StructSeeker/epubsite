@@ -184,6 +184,8 @@ export const RESERVED_PATHS = {
   transit: 'index.html',
   guide: '404.html',
   manifest: 'publication.json',
+  pwaManifest: 'manifest.webmanifest',
+  serviceWorker: 'sw.js',
   assetsDir: '_epubsite_assets/',
   hostingDir: '_hosting/',
   rootMarker: '.epubsite-root',
@@ -208,6 +210,7 @@ export const SHELL_ASSETS = {
   htmx: 'htmx.esm.js',
   shellData: 'shell-data.json',
   iconSvg: 'icon.svg',
+  pwaJs: 'pwa.js',
   /** A directory, hence the trailing slash. */
   pagefindDir: 'pagefind/',
 } as const
@@ -232,6 +235,8 @@ export function collidesWithReserved(
   if (entryPath === shellName) return true
   if (entryPath === RESERVED_PATHS.guide) return true
   if (entryPath === RESERVED_PATHS.manifest) return true
+  if (entryPath === RESERVED_PATHS.pwaManifest) return true
+  if (entryPath === RESERVED_PATHS.serviceWorker) return true
   if (entryPath === RESERVED_PATHS.rootMarker) return true
   if (entryPath.startsWith(RESERVED_PATHS.assetsDir)) return true
   if (entryPath.startsWith(RESERVED_PATHS.hostingDir)) return true

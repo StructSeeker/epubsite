@@ -411,21 +411,61 @@ test('a copy attempt reports itself without destroying the icon', async ({ page 
   await page.waitForFunction(() => document.documentElement.dataset['epubsite'] === 'ready')
 
   const button = page.locator('#epubsite-share')
+  const status = page.locator('#epubsite-flash')
   await button.click()
-
-  // The message used to be written into the button's text. For a symbol button
-  // that means deleting the symbol, so the icon has to still be there afterwards —
-  // this is the assertion that fails if anyone goes back to `textContent`.
-  await expect(button).toHaveAttribute('data-flash', /./)
-  await expect(button.locator('svg')).toBeVisible()
-  await expect(button).toHaveAttribute('aria-label', 'Copy a link to this book')
 
   // Whichever way the clipboard went: "Link copied" and "Copy failed" both count,
   // because what is under test is the reporting, not the permission.
-  expect(['Link copied', 'Copy failed']).toContain(await button.getAttribute('data-flash'))
+  await expect(status).toHaveText(/Link copied|Copy failed/)
+
+  // **Readable, not merely present.** The message used to be a `::after` bubble on
+  // the button, and the toolbar clips its block axis so that it can scroll
+  // sideways (§5.10) — so the bubble was painted below the toolbar's own box and
+  // cut off. Every attribute was there and the text was even in the accessibility
+  // tree; nothing could be seen. The old assertion read the attribute, so it
+  // certified the defect (F.19). These are the assertions that would have failed.
+  const box = await status.boundingBox()
+  const toolbar = await page.locator('#epubsite-toolbar').boundingBox()
+  const viewport = page.viewportSize() ?? { width: 0, height: 0 }
+  expect(box).not.toBeNull()
+  // It clears the toolbar instead of being clipped by it…
+  expect(box!.y).toBeGreaterThanOrEqual((toolbar?.y ?? 0) + (toolbar?.height ?? 0))
+  // …and it is wholly on screen.
+  expect(box!.x).toBeGreaterThanOrEqual(0)
+  expect(box!.y).toBeGreaterThanOrEqual(0)
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 0.5)
+  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height + 0.5)
+
+  // …and it is not a descendant of the clipping box at all. Both facts are needed:
+  // `getBoundingClientRect` and Playwright's visibility ignore an ancestor's
+  // clipping, so a bubble inside the toolbar would report the same box while
+  // painting nothing.
+  expect(await status.evaluate((element) => element.closest('#epubsite-toolbar') === null)).toBe(
+    true,
+  )
+
+  // So the honest check is the one the browser makes: is the element actually hit
+  // at its own centre? `pointer-events: none` is the bubble's normal state (it must
+  // never eat a click), so it is lifted for the duration of the measurement.
+  const painted = await status.evaluate((element) => {
+    const { style } = element
+    style.pointerEvents = 'auto'
+    const rect = element.getBoundingClientRect()
+    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
+    style.pointerEvents = ''
+    return hit === element
+  })
+  expect(painted).toBe(true)
+
+  // The message must not have been written into the button: for a symbol button
+  // that would delete the icon, so the icon is still there and the button is still
+  // named — the reason the message lives in its own status slot.
+  await expect(button.locator('svg')).toBeVisible()
+  await expect(button).toHaveAttribute('aria-label', 'Copy a link to this book')
+  expect((await button.innerText()).trim()).toBe('')
 
   // And it clears itself.
-  await expect.poll(() => button.getAttribute('data-flash')).toBeNull()
+  await expect(status).toHaveText('', { timeout: 5000 })
 })
 
 test('the toolbar symbols are controls with accessible names, not text', async ({ page }) => {

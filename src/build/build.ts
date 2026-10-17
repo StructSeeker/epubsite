@@ -41,6 +41,7 @@ import { render } from './render/escape'
 import { emptyDiagnostics, warn, type Diagnostics } from './diagnostics'
 import { runtimeAsset, vendorAsset } from './assets/paths'
 import { stableStringify } from './determinism'
+import { renderPwaManifest, renderServiceWorker, siteFiles } from './pwa'
 import { EncryptedContentError, InvalidEpubError, UsageError } from './errors'
 import { resolveOptions, type BuildOptions } from './options'
 import { RESERVED_PATHS, SHELL_ASSETS, collidesWithReserved, toEntryPath, type EntryPath } from '../shared/paths'
@@ -211,6 +212,7 @@ async function runBuild(
           baseUrl: options.baseUrl,
           spa,
           theme: options.theme,
+          pwa: options.pwa,
           notices: fixedLayout ? [FIXED_LAYOUT_NOTICE] : [],
           search: options.search,
           bookJsonLd: structured.book,
@@ -252,6 +254,18 @@ async function runBuild(
     // its contents below.
     { entryPath: toEntryPath(RESERVED_PATHS.rootMarker), content: ROOT_MARKER_CONTENT },
   ]
+  if (options.pwa) {
+    generated.push(
+      {
+        entryPath: toEntryPath(RESERVED_PATHS.pwaManifest),
+        content: renderPwaManifest(model.title),
+      },
+      {
+        entryPath: toEntryPath(`${RESERVED_PATHS.assetsDir}${SHELL_ASSETS.pwaJs}`),
+        content: await readFile(runtimeAsset(SHELL_ASSETS.pwaJs)),
+      },
+    )
+  }
   if (spa) {
     // The runtime module, its data and the library it drives are only shipped
     // when there is a runtime: `--no-spa` produces a site with no JavaScript at
@@ -299,6 +313,15 @@ async function runBuild(
     let planned = 0
     for (const size of sourceSizes.values()) planned += size
     for (const file of generated) planned += byteLength(file.content)
+    if (options.pwa) {
+      planned += byteLength(
+        renderServiceWorker([
+          ...entryPaths,
+          ...generated.map((file) => file.entryPath),
+          toEntryPath(RESERVED_PATHS.serviceWorker),
+        ]),
+      )
+    }
 
     return {
       outDir,
@@ -341,6 +364,13 @@ async function runBuild(
       diagnostics,
     )
     if (!outcome.indexed) generatedBytes += 0
+  }
+  if (options.pwa) {
+    const files = await siteFiles(outDir)
+    generatedBytes += await sink.write(
+      toEntryPath(RESERVED_PATHS.serviceWorker),
+      renderServiceWorker([...files, toEntryPath(RESERVED_PATHS.serviceWorker)]),
+    )
   }
 
   return {

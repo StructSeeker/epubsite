@@ -476,27 +476,49 @@
   }
 
   /*
-   * "Link copied".
+   * The share button's message (§5.8, F.19).
    *
-   * Drawn here rather than written into the button, because the button's content
-   * *is* the icon: assigning `textContent` would delete it. `attr()` keeps the
-   * message out of the markup as well, so the DOM the runtime manipulates holds
-   * no presentation.
+   * It lives outside the toolbar for one reason: the toolbar clips its block axis
+   * (`overflow-y: hidden`, above), so a bubble laid out inside it — which is what
+   * this used to be, a `::after` on the button — was cut off at the toolbar's edge
+   * and could never be read. `position: fixed` is what puts it outside that clip;
+   * the offsets anchor it just under the toolbar at the inline end, which is where
+   * the control that produces it sits (the toolbar is always the top row).
+   *
+   * `pointer-events: none` because a transient message must never become an
+   * obstacle to a click. `opacity` rather than `display: none` because a live
+   * region that is out of the tree at the moment it is filled is announced by
+   * nobody; the element is empty whenever there is nothing to say.
+   *
+   * The typography is declared rather than inherited: a `<p>` outside the content
+   * pane is still in the same document as the book's stylesheets, so the book's
+   * own `p { text-indent, font-family, … }` would otherwise reach the reader's
+   * chrome — the residual risk §5.13 records, in its second concrete instance.
    */
-  #epubsite-share[data-flash]::after {
-    content: attr(data-flash);
-    position: absolute;
-    inset-block-start: calc(100% + 0.35rem);
-    inset-inline-end: 0;
+  #epubsite-flash {
+    position: fixed;
+    inset-block-start: calc(var(--shell-toolbar-height) + 0.35rem);
+    inset-inline-end: 1rem;
     z-index: 20;
+    margin: 0;
     padding: 0.25rem 0.5rem;
     border: 1px solid var(--shell-control);
     border-radius: 4px;
     background: var(--shell-surface);
     color: var(--shell-fg);
+    font: inherit;
     font-size: 0.85rem;
     line-height: 1.4;
+    text-indent: 0;
+    text-align: start;
+    text-transform: none;
     white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  #epubsite-flash:not(:empty) {
+    opacity: 1;
   }
 
   #epubsite-content {

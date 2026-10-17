@@ -16,6 +16,7 @@ describe('resolveOptions', () => {
     expect(options.hosting).toBe('404')
     expect(options.jsonLd).toBe('full')
     expect(options.spa).toBe(true)
+    expect(options.pwa).toBe(true)
     // The book keeps its own styles unless the publisher says otherwise: the
     // reader's default is an opt-in exception to §1.2, not a new default.
     expect(options.contentStyle).toBe('book')

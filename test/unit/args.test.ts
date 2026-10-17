@@ -42,6 +42,12 @@ describe('parseCliArgs — options', () => {
     expect(parseCliArgs(['b.epub', '--no-spa']).options.spa).toBe(false)
   })
 
+  it('parses --pwa as an explicit boolean', () => {
+    expect(parseCliArgs(['b.epub', '--pwa', 'true']).options.pwa).toBe(true)
+    expect(parseCliArgs(['b.epub', '--pwa', 'false']).options.pwa).toBe(false)
+    expect(() => parseCliArgs(['b.epub', '--pwa', 'yes'])).toThrow(/--pwa must be true or false/)
+  })
+
   it('lets --no-json-ld win over --json-ld, whichever order they appear in', () => {
     // The explicit off switch is never accidental; a stray `--json-ld` in a
     // shared script can be.

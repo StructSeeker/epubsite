@@ -141,6 +141,8 @@ describe('build — a site that is the book', () => {
       path === RESERVED_PATHS.transit ||
       path === RESERVED_PATHS.guide ||
       path === RESERVED_PATHS.manifest ||
+      path === RESERVED_PATHS.pwaManifest ||
+      path === RESERVED_PATHS.serviceWorker ||
       path === RESERVED_PATHS.rootMarker ||
       path.startsWith(RESERVED_PATHS.assetsDir) ||
       path.startsWith(RESERVED_PATHS.hostingDir)
@@ -456,9 +458,11 @@ describe('build — the reserved namespace (§3.2)', () => {
     expect(error.message).toContain('@ch01.xhtml')
   })
 
-  it('fails with exit 4 when the book occupies the 404 guide, the manifest or the root marker', async () => {
+  it('fails with exit 4 when the book occupies a reserved generated path', async () => {
     expect((await failure(() => buildSite(sampleEpub({ '404.html': 'x' })))).exitCode).toBe(4)
     expect((await failure(() => buildSite(sampleEpub({ 'publication.json': '{}' })))).exitCode).toBe(4)
+    expect((await failure(() => buildSite(sampleEpub({ 'manifest.webmanifest': '{}' })))).exitCode).toBe(4)
+    expect((await failure(() => buildSite(sampleEpub({ 'sw.js': '' })))).exitCode).toBe(4)
     expect((await failure(() => buildSite(sampleEpub({ '.epubsite-root': '' })))).exitCode).toBe(4)
   })
 
@@ -600,6 +604,37 @@ describe('build — refusals', () => {
       expect(existsSync(icon), `expected icon for spa=${String(spa)}`).toBe(true)
       expect(await readFile(icon, 'utf8')).toContain('<svg')
     }
+  })
+
+  it('ships an installable offline PWA by default', async () => {
+    const { site } = await buildSite()
+    const tree = await readTree(site.out)
+    const shell = tree.get(RESERVED_PATHS.shell)?.content.toString('utf8') ?? ''
+    const manifest = JSON.parse(
+      tree.get(RESERVED_PATHS.pwaManifest)?.content.toString('utf8') ?? '{}',
+    ) as { display?: string; start_url?: string; icons?: Array<{ src?: string }> }
+    const serviceWorker = tree.get(RESERVED_PATHS.serviceWorker)?.content.toString('utf8') ?? ''
+
+    expect(shell).toContain(`<link rel="manifest" href="${RESERVED_PATHS.pwaManifest}"`)
+    expect(shell).toContain(`${RESERVED_PATHS.assetsDir}${SHELL_ASSETS.pwaJs}`)
+    expect(manifest.display).toBe('standalone')
+    expect(manifest.start_url).toBe(`./${RESERVED_PATHS.shell}`)
+    expect(manifest.icons?.[0]?.src).toBe(`${RESERVED_PATHS.assetsDir}${SHELL_ASSETS.iconSvg}`)
+    expect(serviceWorker).toContain(`./${RESERVED_PATHS.shell}`)
+    expect(serviceWorker).toContain('./OEBPS/text/ch01.xhtml')
+    expect(serviceWorker).toContain(`./${RESERVED_PATHS.pwaManifest}`)
+  })
+
+  it('omits all PWA output when disabled', async () => {
+    const { site } = await buildSite(sampleEpub(), { pwa: false })
+    const tree = await readTree(site.out)
+    const shell = tree.get(RESERVED_PATHS.shell)?.content.toString('utf8') ?? ''
+
+    expect(tree.has(RESERVED_PATHS.pwaManifest)).toBe(false)
+    expect(tree.has(RESERVED_PATHS.serviceWorker)).toBe(false)
+    expect(tree.has(`${RESERVED_PATHS.assetsDir}${SHELL_ASSETS.pwaJs}`)).toBe(false)
+    expect(shell).not.toContain('rel="manifest"')
+    expect(shell).not.toContain(SHELL_ASSETS.pwaJs)
   })
 
   it('fails with exit 2 on an invalid option, before touching the file system', async () => {
@@ -1162,6 +1197,27 @@ describe('build — presentation that must not leak into reading order', () => {
     const plain = await buildSite(sampleEpub(), { spa: false })
     const noSpa = (await readTree(plain.site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
     expect(noSpa).not.toContain('id="epubsite-home"')
+  })
+
+  it('puts the share message outside the toolbar, where it cannot be clipped (§5.8, F.19)', async () => {
+    const { site } = await buildSite()
+    const shell = (await readTree(site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
+
+    // A live region, emitted empty: the runtime only ever fills it. Creating the
+    // element at the same moment it is filled is announced by nobody.
+    const status = /<p id="epubsite-flash"[^>]*><\/p>/.exec(shell)?.[0] ?? ''
+    expect(status).toContain('role="status"')
+
+    // The structural half of the fix, asserted as a position because position is
+    // what makes the message readable: the toolbar clips its block axis so that it
+    // can scroll sideways (§5.10), so a message laid out inside it is cut off at
+    // its edge — which is what the old `::after` on the share button did.
+    expect(shell.indexOf('id="epubsite-flash"')).toBeGreaterThan(shell.indexOf('</header>'))
+
+    // SPA-only, like the control it serves.
+    const plain = await buildSite(sampleEpub(), { spa: false })
+    const noSpa = (await readTree(plain.site.out)).get('epubsite.html')?.content.toString('utf8') ?? ''
+    expect(noSpa).not.toContain('epubsite-flash')
   })
 })
 

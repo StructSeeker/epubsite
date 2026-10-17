@@ -23,6 +23,7 @@ const jobs = [
   // than live only in the repository, or a published package ships the icon
   // without the notice. Same convention as vendor/htmx.LICENSE.
   ['src/runtime/icon.LICENSE', 'build/runtime/icon.LICENSE'],
+  ['src/runtime/pwa.js', 'build/runtime/pwa.js'],
 ]
 
 let failed = false

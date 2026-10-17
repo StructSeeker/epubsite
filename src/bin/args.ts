@@ -58,6 +58,7 @@ Options
       --no-json-ld     Same as --json-ld none
       --search         Build a Pagefind index (appendix D)
       --no-spa         Multi-page site only; do not inject htmx
+      --pwa <bool>     Installable offline PWA output (default true)
       --theme <t>      auto | light | dark               (default auto)
       --content-style <s>
                        book | reader                      (default book)
@@ -96,6 +97,7 @@ const CLI_OPTIONS = {
   'no-json-ld': { type: 'boolean' },
   search: { type: 'boolean' },
   'no-spa': { type: 'boolean' },
+  pwa: { type: 'string' },
   theme: { type: 'string' },
   'content-style': { type: 'string' },
   pagefind: { type: 'string' },
@@ -162,9 +164,16 @@ export function parseCliArgs(argv: readonly string[]): CliInvocation {
   else if (values['json-ld'] !== undefined) options.jsonLd = values['json-ld'] as JsonLdMode
   if (values.search === true) options.search = true
   if (values['no-spa'] === true) options.spa = false
+  if (values.pwa !== undefined) options.pwa = parseBooleanOption('--pwa', values.pwa)
   if (values.theme !== undefined) options.theme = values.theme as Theme
   if (values['content-style'] !== undefined) {
     options.contentStyle = values['content-style'] as ContentStyle
+  }
+
+  function parseBooleanOption(name: string, raw: string): boolean {
+    if (raw === 'true') return true
+    if (raw === 'false') return false
+    throw new UsageError(`${name} must be true or false, got: ${raw}`)
   }
   if (values.pagefind !== undefined) options.pagefind = values.pagefind
   if (values.clean === true) options.clean = true

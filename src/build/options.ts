@@ -43,6 +43,8 @@ export interface BuildOptions {
   search: boolean
   /** `--no-spa`: multi-page site only, no htmx. */
   spa: boolean
+  /** `--pwa`: emit install metadata and an offline service worker. */
+  pwa: boolean
   theme: Theme
   /** `--content-style`: whose stylesheet styles the book's content. */
   contentStyle: ContentStyle
@@ -64,6 +66,7 @@ export const DEFAULT_OPTIONS: BuildOptions = {
   jsonLd: 'full',
   search: false,
   spa: true,
+  pwa: true,
   theme: 'auto',
   contentStyle: 'book',
   clean: false,

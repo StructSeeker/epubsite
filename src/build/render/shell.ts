@@ -52,6 +52,8 @@ export interface ShellInput {
   baseUrl: BaseUrl
   /** `--no-spa`: no htmx attributes, no runtime module. */
   spa: boolean
+  /** `--pwa`: emit install metadata and register the offline worker. */
+  pwa: boolean
   /** `--theme`: `auto` emits nothing and lets `prefers-color-scheme` decide. */
   theme: Theme
   /** Things the reader should be told about, shown on the landing page. */
@@ -99,6 +101,7 @@ export function renderShell(input: ShellInput): SafeHtml {
 <title>${model.title}</title>${metaDescription(model)}${canonical}${bookLd(input.bookJsonLd)}
 <link rel="stylesheet" href="${RESERVED_PATHS.assetsDir}${SHELL_ASSETS.shellCss}">
 <link rel="icon" type="image/svg+xml" href="${RESERVED_PATHS.assetsDir}${SHELL_ASSETS.iconSvg}"${shellMarker(spa)}>
+${pwaHead(input.pwa, spa)}
 <!-- The runtime owns everything below this line in <head> (§5.4.3). -->
 </head>
 <body${bodyAttrs(spa)}>
@@ -121,10 +124,46 @@ ${shareButton(spa)}
 ${renderLanding(input)}
 </main>
 </div>
+${statusFlash(spa)}
 ${runtimeScript(spa)}
+${pwaScript(input.pwa)}
 </body>
 </html>
 `
+}
+
+function pwaHead(pwa: boolean, spa: boolean): SafeHtml {
+  return pwa
+    ? html`<link rel="manifest" href="${RESERVED_PATHS.pwaManifest}"${shellMarker(spa)}>`
+    : markSafe('')
+}
+
+function pwaScript(pwa: boolean): SafeHtml {
+  return pwa
+    ? html`<script src="${RESERVED_PATHS.assetsDir}${SHELL_ASSETS.pwaJs}"></script>`
+    : markSafe('')
+}
+
+/**
+ * Where the share button's message appears (§5.8, F.19).
+ *
+ * It is a sibling of the frame rather than a child of the toolbar, and that is the
+ * entire reason it is an element: the toolbar clips its block axis (`overflow-y:
+ * hidden`, §5.10) so that it can scroll sideways without growing a second
+ * scrollbar. A message laid out *inside* it is therefore cut off at its edge —
+ * which is exactly what happened when this was a `::after` bubble on the share
+ * button: the text existed, was in the accessibility tree, and could not be read.
+ * A message that has to escape its container cannot be laid out inside it.
+ *
+ * `role="status"` because the button is a symbol: the outcome is the only thing
+ * there is to say, and a live region says it without moving focus. The element is
+ * emitted **empty** and only ever updated — a live region that enters the document
+ * at the same moment it is filled is announced by nobody.
+ *
+ * SPA-only, like the control it serves: without a runtime nothing writes to it.
+ */
+function statusFlash(spa: boolean): SafeHtml {
+  return spa ? html`<p id="epubsite-flash" role="status"></p>` : markSafe('')
 }
 
 function bodyAttrs(spa: boolean): SafeHtml {

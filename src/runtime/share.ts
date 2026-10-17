@@ -32,7 +32,7 @@ export function wireShare(context: ShareContext): void {
   if (button === null) return
 
   button.addEventListener('click', () => {
-    void copy(context, button)
+    void copy(context)
   })
 
   syncEnabled(button)
@@ -42,7 +42,7 @@ export function wireShare(context: ShareContext): void {
   document.body.addEventListener('htmx:historyRestore', () => syncEnabled(button))
 }
 
-async function copy(context: ShareContext, button: HTMLElement): Promise<void> {
+async function copy(context: ShareContext): Promise<void> {
   const url = new URL(location.href)
 
   if (isChapter(context)) {
@@ -57,14 +57,14 @@ async function copy(context: ShareContext, button: HTMLElement): Promise<void> {
 
   try {
     await navigator.clipboard.writeText(url.href)
-    flash(button, 'Link copied')
+    flash('Link copied')
   } catch (error) {
     // Clipboard access needs a secure context and a user gesture. Both hold for
     // any real deployment, so a failure here is worth saying out loud rather
     // than swallowing — a button that appears to work and copies nothing is
     // worse than one that admits it failed.
     console.error('[epubsite] could not write to the clipboard.', error)
-    flash(button, 'Copy failed')
+    flash('Copy failed')
   }
 }
 
@@ -90,18 +90,25 @@ function syncEnabled(button: HTMLElement): void {
 let restore: number | undefined
 
 /**
- * Shows a short message beside the button.
+ * Says what happened, in the shell's status slot (§5.8, F.19).
  *
- * The button is a symbol, so the message cannot be written into its text: doing
- * that would delete the icon, and putting the icon back afterwards means
- * re-creating markup that the stylesheet and the `aria-label` would then have to
- * agree with. The message goes into a data attribute and the stylesheet draws it,
- * which leaves the button's own content — and its accessible name — untouched.
+ * Not in the button: its content is the icon, and writing text into it would
+ * delete the icon — the reason this used to be drawn from a `data-flash`
+ * attribute by a `::after` rule. That rule could not work: the bubble was laid
+ * out inside the toolbar, which clips its block axis so that it can scroll
+ * sideways, so the message was painted outside the toolbar's box and cut off.
+ * The slot is a sibling of the frame instead, positioned outside that clip.
+ *
+ * The element is looked up rather than created: a live region that appears at the
+ * same moment it is filled is announced by nobody. A shell without the slot (an
+ * older artifact, or `--no-spa`) simply has nowhere to say anything.
  */
-function flash(button: HTMLElement, message: string): void {
-  button.dataset['flash'] = message
+function flash(message: string): void {
+  const status = document.getElementById('epubsite-flash')
+  if (status === null) return
+  status.textContent = message
   window.clearTimeout(restore)
   restore = window.setTimeout(() => {
-    delete button.dataset['flash']
+    status.textContent = ''
   }, 1500)
 }
