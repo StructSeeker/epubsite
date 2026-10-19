@@ -182,6 +182,9 @@ PWA output is enabled by default. The generated service worker precaches the
 completed site, including a Pagefind index when `--search` produces one, so the
 reader remains available offline after its first load. Use `--pwa false` for a
 plain static site with no manifest, registration script, or service worker.
+Offline token links such as `/OPS/@chapter.xhtml` are routed through the cached
+404 guide, so shared reader links continue to work without a network
+connection.
 
 **Stream discipline:** the build result goes to **stdout**; warnings, errors and
 progress go to **stderr**. `epubsite book.epub > result.json` is safe.

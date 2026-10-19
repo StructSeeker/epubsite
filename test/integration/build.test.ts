@@ -623,6 +623,12 @@ describe('build — refusals', () => {
     expect(serviceWorker).toContain(`./${RESERVED_PATHS.shell}`)
     expect(serviceWorker).toContain('./OEBPS/text/ch01.xhtml')
     expect(serviceWorker).toContain(`./${RESERVED_PATHS.pwaManifest}`)
+    expect(serviceWorker).toContain('self.skipWaiting()')
+    expect(serviceWorker).toContain('self.clients.claim()')
+    expect(serviceWorker).toContain("event.request.mode === 'navigate'")
+    expect(serviceWorker).toContain(`caches.match('./${RESERVED_PATHS.guide}')`)
+    expect(serviceWorker).toContain("status: 404")
+    expect(serviceWorker).toContain("event.request.method === 'HEAD' ? new Request(url.href)")
   })
 
   it('omits all PWA output when disabled', async () => {

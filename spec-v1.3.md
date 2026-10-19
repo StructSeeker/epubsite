@@ -941,6 +941,12 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <p>依赖边界也由它表达：<code>htmlparser2</code> 与 <code>yauzl</code> 是运行期依赖；<code>htmx</code>、TypeScript、tsup、Vitest、Playwright 与 ESLint 仅是开发期依赖。Pagefind 不在任何依赖字段中，它是 <code>--search</code> 请求时才发现的外部工具。<code>scripts/copy-assets.mjs</code> 把运行期需要但 tsup 不会发出的 CSS、SVG、许可证与 PWA 注册脚本复制到 <code>build/runtime/</code>，因此 <code>npm pack</code> 后的 <code>files</code> 白名单与资产定位规则必须保持一致。</p>
 
+<h4>C.4.2 PWA 的离线令牌入口</h4>
+
+<p>启用 <code>--pwa</code> 时，生成的 service worker 预缓存完整站点，并接管导航请求。若导航 URL 的最后一个路径段以 <code>@</code> 开头，它只返回预缓存的 <code>404.html</code>，并保留 <code>404</code> 状态码；因此现有的 404 引导仍负责把令牌还原为真实章节路径。普通缺失资源不会进入这条分支，继续按普通请求处理。</p>
+
+<p>404 引导会以 <code>HEAD</code> 请求探测 <code>.epubsite-root</code>。由于预缓存响应是以 <code>GET</code> 写入的，service worker 对精确的 <code>HEAD</code> 请求使用同 URL 的 GET 缓存项查找，并返回无正文的对应响应。这样部署在子路径下的离线令牌链接也能找到站点根，而无需网络。</p>
+
 <h3>C.5 确定性与 diff 稳定性</h3>
 
 <p>不承诺跨运行字节一致（E.2）。承诺的是一组顺序纪律：显式排序、按 spine 序号回填、不把构建机绝对路径写进产物。目标是<b>diff 可读</b>。</p>

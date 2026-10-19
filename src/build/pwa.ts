@@ -48,13 +48,31 @@ export function renderServiceWorker(files: readonly EntryPath[]): string {
   const urls = files.map((file) => `./${toUrlPath(file)}`)
   return `const CACHE = 'epubsite-v1'\nconst PRECACHE = ${JSON.stringify(urls)}\n\n` +
     `self.addEventListener('install', (event) => {\n` +
-    `  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)))\n` +
+    `  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()))\n` +
     `})\n\n` +
     `self.addEventListener('activate', (event) => {\n` +
-    `  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))))\n` +
+    `  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim()))\n` +
     `})\n\n` +
     `self.addEventListener('fetch', (event) => {\n` +
-    `  if (event.request.method !== 'GET') return\n` +
-    `  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)))\n` +
+    `  if (event.request.method !== 'GET' && event.request.method !== 'HEAD') return\n` +
+    `  const url = new URL(event.request.url)\n` +
+    `  const basename = url.pathname.slice(url.pathname.lastIndexOf('/') + 1)\n` +
+    `  if (event.request.mode === 'navigate' && basename.startsWith('@') && basename.length > 1) {\n` +
+    `    event.respondWith(caches.match('./${RESERVED_PATHS.guide}').then((guide) => {\n` +
+    `      if (guide === undefined) return fetch(event.request)\n` +
+    `      return guide.clone().arrayBuffer().then((body) => new Response(body, {\n` +
+    `        status: 404,\n` +
+    `        statusText: 'Not Found',\n` +
+    `        headers: guide.headers,\n` +
+    `      }))\n` +
+    `    }))\n` +
+    `    return\n` +
+    `  }\n` +
+    `  const lookup = event.request.method === 'HEAD' ? new Request(url.href) : event.request\n` +
+    `  event.respondWith(caches.match(lookup).then((cached) => {\n` +
+    `    if (cached === undefined) return fetch(event.request)\n` +
+    `    if (event.request.method !== 'HEAD') return cached\n` +
+    `    return new Response(null, { status: cached.status, statusText: cached.statusText, headers: cached.headers })\n` +
+    `  }))\n` +
     `})\n`
 }
