@@ -291,6 +291,8 @@ https://mybook.surge.sh/OEBPS/text/@ch03.xhtml     令牌路径</code></pre>
 
 <p><b>favicon 属于第 1 类</b>（§2.2）：它是 DOM 属性，而且会被重新解析。</p>
 
+<p><b>章节的子资源同样要绝对化，但时机不同。</b>图片、音视频与 <code>srcset</code> 的 URL 在内容被交换进来的那一刻，按<b>当时的</b>文档基准钉成绝对地址（§5.4 的 <code>afterSwap</code>）。触发原因不是导航本身，而是 htmx 的历史快照：它把上一章保留为 HTML，并在地址栏已经移到新章节<b>之后</b>才把这段标记重新插回文档，于是 <code>../Images/pic.png</code> 会按新章节的目录再解析一次，变成一个没人看见的 404。只要标记里已经是绝对地址，任何一次重新解析都得到同一个 URL。章节内部的链接<b>不</b>做这件事：它们只有被点击时才会请求，而绝对化会改变阅读器自身导航所比较的东西。</p>
+
 <h3>5.4 章节资产同步（head 槽位）</h3>
 
 <p><code>syncChapter()</code> 一次做完六件事——样式、<b>落地页的 canonical 链接</b>、<b>工具栏上一页/下一页的目标</b>、<code>body</code> 属性、侧边栏高亮、文档标题——因为它们由同一个 key 驱动，拆成多个监听器就是它们开始互相漂移的方式：一个在 <code>afterSwap</code> 触发、另一个在 <code>afterSettle</code>，页面会有若干帧停在一个没人设计过的状态里。翻页控件排在章节/落地页分支<b>之前</b>，因为落地页也有它的状态：「下一页」是读者不进侧边栏也能开始读这本书的方式（§5.7）。</p>
@@ -945,7 +947,11 @@ epubsite serve [dir] [--port &lt;n&gt;]</code></pre>
 
 <p>启用 <code>--pwa</code> 时，生成的 service worker 预缓存完整站点，并接管导航请求。若导航 URL 的最后一个路径段以 <code>@</code> 开头，它只返回预缓存的 <code>404.html</code>，并保留 <code>404</code> 状态码；因此现有的 404 引导仍负责把令牌还原为真实章节路径。普通缺失资源不会进入这条分支，继续按普通请求处理。</p>
 
-<p>404 引导会以 <code>HEAD</code> 请求探测 <code>.epubsite-root</code>。由于预缓存响应是以 <code>GET</code> 写入的，service worker 对精确的 <code>HEAD</code> 请求使用同 URL 的 GET 缓存项查找，并返回无正文的对应响应。这样部署在子路径下的离线令牌链接也能找到站点根，而无需网络。</p>
+<p><b>缓存查找只按 URL，不按请求对象。</b>Cache API 的匹配会把响应的 <code>Vary</code> 头与<i>请求</i>的头逐一比对：预缓存条目由一次普通 <code>fetch</code> 写入（<code>Accept: */*</code>），而导航请求带的是 <code>Accept: text/html,application/xhtml+xml,…</code>。因此只要托管方发送 <code>Vary: Accept</code>，两者就不相等，查找落空，站点看起来装好了、断网却是一片空白。静态站点每个 URL 只有一份表示，所以匹配时忽略 <code>Vary</code> 并丢弃查询串不是取舍：查询串从不选择另一个文件，而 <code>epubsite.html?p=…</code> 必须仍然找到壳。</p>
+
+<p>同样的道理作用于写入端：若响应带 <code>Vary: *</code>，<code>Cache.put</code> 会直接拒绝，预缓存便整体失效。因此预缓存先取得响应、去掉 <code>Vary</code> 再写入，并且逐个文件写入而不是 <code>addAll</code>——<code>addAll</code> 是全有或全无，托管方只要拒绝一个条目（例如不提供 dotfile 的 <code>.epubsite-root</code>），整个站点就完全没有离线能力。失败条目会汇总为一条 <code>console.warn</code>，而不是让安装阶段静默中止。</p>
+
+<p>404 引导会以 <code>HEAD</code> 请求探测 <code>.epubsite-root</code>。按 URL 查找后，<code>HEAD</code> 与预缓存的 <code>GET</code> 条目指向同一个键，service worker 返回无正文的对应响应。这样部署在子路径下的离线令牌链接也能找到站点根，而无需网络。</p>
 
 <h3>C.5 确定性与 diff 稳定性</h3>
 

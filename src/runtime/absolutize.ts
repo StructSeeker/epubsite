@@ -29,3 +29,65 @@ export function absolutizeShell(root: URL): void {
     link.dataset.abs = '1'
   }
 }
+
+/**
+ * The subresource attributes a chapter can carry, and the ones a later base
+ * change can quietly break.
+ *
+ * `srcset` is included because an image that has one is requested through it,
+ * and its candidates are URLs with descriptors attached.
+ */
+const SUBRESOURCES: ReadonlyArray<readonly [selector: string, attribute: string]> = [
+  ['img[src]', 'src'],
+  ['source[src]', 'src'],
+  ['audio[src]', 'src'],
+  ['video[src]', 'src'],
+  ['track[src]', 'src'],
+  ['video[poster]', 'poster'],
+]
+
+/**
+ * Pins a chapter's subresource URLs to the base in force when it was inserted.
+ *
+ * Called on every swap, while the document still names the chapter that markup
+ * came from. Without it, this is a real defect rather than a cosmetic one:
+ * htmx's history snapshot stores the previous chapter's markup as HTML and
+ * re-inserts it into the document *after* the address bar has moved on, so a
+ * relative `../Images/pic.png` is re-resolved against the new chapter's
+ * directory — a 404 nobody sees except in the network log, on every Back step.
+ *
+ * Links are deliberately left alone: they are only fetched when clicked, and
+ * absolutising them would change what the reader's own navigation compares.
+ */
+export function absolutizeContent(content: ParentNode | null, base: string): void {
+  if (content === null) return
+
+  for (const [selector, attribute] of SUBRESOURCES) {
+    for (const element of content.querySelectorAll(selector)) {
+      const value = element.getAttribute(attribute)
+      if (value === null || value === '') continue
+      element.setAttribute(attribute, new URL(value, base).href)
+    }
+  }
+
+  for (const element of content.querySelectorAll('[srcset]')) {
+    const value = element.getAttribute('srcset')
+    if (value === null || value.trim() === '') continue
+    element.setAttribute('srcset', absolutizeSrcset(value, base))
+  }
+}
+
+/** Rewrites each candidate URL in a `srcset`, keeping its descriptor. */
+function absolutizeSrcset(value: string, base: string): string {
+  return value
+    .split(',')
+    .map((candidate) => {
+      const trimmed = candidate.trim()
+      if (trimmed === '') return ''
+      const [url, ...descriptor] = trimmed.split(/\s+/)
+      const absolute = new URL(url as string, base).href
+      return [absolute, ...descriptor].join(' ')
+    })
+    .filter((candidate) => candidate !== '')
+    .join(', ')
+}

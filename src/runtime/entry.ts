@@ -62,6 +62,28 @@ export function entryRequestUrl(root: URL, entry: Entry): string {
   return new URL(entry.key, root).href
 }
 
+/**
+ * True when the entry chapter's response has been overtaken by a navigation.
+ *
+ * The entry load is asynchronous: the address bar already names the chapter
+ * before its markup arrives (that order is required — see the module comment).
+ * A reader can therefore click a sidebar link while the entry chapter is still
+ * in flight, and htmx then swaps *both* responses. The late one inserts the
+ * entry chapter under the new URL, where its relative images resolve against the
+ * wrong directory and 404 — a silent defect that costs bandwidth and nothing
+ * else, which is exactly why it needs an explicit rule rather than a timing
+ * assumption.
+ */
+export function isStaleEntryResponse(input: {
+  entryKey: string
+  entryUrl: string
+  responseUrl: string
+  currentKey: string | null
+}): boolean {
+  if (input.responseUrl !== input.entryUrl) return false
+  return input.currentKey !== input.entryKey
+}
+
 function stripLeadingSlash(value: string): string {
   return value.startsWith('/') ? value.slice(1) : value
 }

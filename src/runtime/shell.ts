@@ -12,14 +12,14 @@
  *   5. fetch `shell-data.json`           — by absolute URL, never relatively
  *   6. wire the runtime, then fetch the chapter if the entry named one
  */
-import { absolutizeShell } from './absolutize'
+import { absolutizeContent, absolutizeShell } from './absolutize'
 import { keyFromLocation } from './location-key'
 import { loadHtmx } from './htmx'
 import { freezeSiteRoot } from './site-root'
 import { wireDrawer } from './drawer'
 import { loadShellData } from './data'
 import { syncChapter, type ChapterSyncContext } from './chapter'
-import { entryRequestUrl, entryUrl, resolveEntry } from './entry'
+import { entryRequestUrl, entryUrl, isStaleEntryResponse, resolveEntry } from './entry'
 import { wirePager } from './pager'
 import { wireShare } from './share'
 import { wireSearch } from './search'
@@ -122,6 +122,29 @@ async function start(): Promise<void> {
   document.documentElement.dataset.epubsite = htmx === null ? 'degraded' : 'ready'
 
   if (entry !== null && htmx !== null) {
+    const entryUrl = entryRequestUrl(SITE_ROOT, entry)
+    // A reader can navigate before the entry chapter arrives. htmx would then
+    // swap that late response in on top of the chapter they asked for, leaving
+    // the wrong markup under the current base. Vetoing the swap is the only
+    // place this can be fixed: by the time the response lands, the decision has
+    // already been made from a URL that no longer exists.
+    const declineStaleEntry = (event: Event): void => {
+      const detail = (event as CustomEvent<{ xhr?: XMLHttpRequest; shouldSwap?: boolean }>).detail
+      if (detail.xhr === undefined) return
+      if (
+        !isStaleEntryResponse({
+          entryKey: entry.key,
+          entryUrl,
+          responseUrl: detail.xhr.responseURL,
+          currentKey: keyFromLocation(SITE_ROOT),
+        })
+      ) {
+        return
+      }
+      detail.shouldSwap = false
+    }
+    document.body.addEventListener('htmx:beforeSwap', declineStaleEntry)
+
     try {
       // The entry navigation is programmatic and must not be mistaken for a
       // reader clicking a link back into the chapter they are already reading.
@@ -129,7 +152,7 @@ async function start(): Promise<void> {
       // address bar on the chapter we are about to fetch, so the short-circuit
       // in `wireNavigation` would cancel the very request that gets us there.
       entryInFlight = true
-      await htmx.ajax('GET', entryRequestUrl(SITE_ROOT, entry), {
+      await htmx.ajax('GET', entryUrl, {
         target: '#epubsite-content',
         swap: 'innerHTML show:top',
         push: false,
@@ -138,6 +161,7 @@ async function start(): Promise<void> {
       console.error('[epubsite] the requested chapter did not load.', error)
     } finally {
       entryInFlight = false
+      document.body.removeEventListener('htmx:beforeSwap', declineStaleEntry)
     }
   }
 
@@ -149,7 +173,14 @@ async function start(): Promise<void> {
 function wireChapterSync(context: ChapterSyncContext): void {
   const sync = (): void => syncChapter(context, keyFromLocation(SITE_ROOT))
 
-  document.body.addEventListener('htmx:afterSwap', () => {
+  document.body.addEventListener('htmx:afterSwap', (event) => {
+    const detail = (event as CustomEvent<{ target?: Element }>).detail
+    // While the base still names the chapter this markup came from. htmx's
+    // history snapshot re-inserts it later, after the address bar has moved on.
+    absolutizeContent(
+      detail.target instanceof Element ? detail.target : document.getElementById('epubsite-content'),
+      document.baseURI,
+    )
     sync()
     focusContent()
   })
