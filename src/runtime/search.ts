@@ -20,9 +20,9 @@
  * shadow root where an ordinary `closest('a')` sees nothing.
  *
  * The stylesheet is injected as an **unlayered** `<link>`. `shell.css` declares
- * `@layer epub, shell`, and unlayered rules outrank every layer regardless of
- * specificity — which is what keeps the search UI's own classes from being
- * flattened by the reader's layout rules (§D.4).
+ * `@layer shell-invariants, epub, shell`, and unlayered rules outrank every layer
+ * regardless of specificity — which is what keeps the search UI's own classes
+ * from being flattened by the reader's layout rules (§D.4).
  */
 import { RESERVED_PATHS, SHELL_ASSETS } from '../shared/paths'
 import type { Htmx } from './htmx'

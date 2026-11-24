@@ -11,8 +11,8 @@
  * Two rules shape the stylesheet half of the implementation:
  *
  *   1. **Everything is wrapped in `@layer epub`.** `shell.css` declares
- *      `@layer epub, shell`, so the book's rules lose to the reader's chrome
- *      regardless of specificity. That is what keeps a book's `body { margin }`
+ *      `@layer shell-invariants, epub, shell`, so the book's rules lose to the
+ *      reader's chrome regardless of specificity. That is what keeps a book's `body { margin }`
  *      from moving the toolbar.
  *
  *   2. **`@import` cannot live inside a layer block**, so an external stylesheet

@@ -1,17 +1,31 @@
  /*
  * Shell styles (spec §5.5, §5.13, §11.2).
  *
- * The first line is load-bearing, not decoration. Declaring `epub` before
- * `shell` fixes the cascade order for the whole document, so every rule the book
- * contributes — which the runtime injects wrapped in `@layer epub` — loses to
- * every rule here regardless of selector specificity or source order. A book
- * with `body { margin: 3em }` cannot move the reader's chrome.
+ * The first line is load-bearing, not decoration. It fixes the cascade order for
+ * the whole document, and it names three layers because the two halves of the
+ * cascade do not order layers the same way.
  *
- * The `!important` declarations on `html` and `body` are a second layer of the
- * same defence: they cover the case where the layer declaration is missing (an
- * older cached stylesheet, a hand-edited site) or where a book's rule is itself
- * `!important` and unlayered. Losing the layout is the one failure a reader
- * cannot work around.
+ * For **normal** declarations, later layers win and unlayered styles win over
+ * all of them — so every rule the book contributes, which the runtime injects
+ * wrapped in `@layer epub`, loses to every rule in `@layer shell` regardless of
+ * selector specificity or source order. A book with `body { margin: 3em }`
+ * cannot move the reader's chrome.
+ *
+ * For `!important` declarations the order is **reversed**: an `!important` in
+ * `@layer epub` beats an `!important` in `@layer shell`, and the only way to
+ * outrank it is to sit in a layer declared *before* `epub`. `shell-invariants`
+ * is that layer, and it holds `<html>` and `<body>` and nothing else. Its
+ * position costs one rule, enforced by `test/unit/shell-invariants.test.ts`: for
+ * normal declarations it is the weakest layer of the three, so **every
+ * declaration in it must be `!important`** — a plain one would simply lose.
+ *
+ * That is why the body's box is declared there rather than here. Layer order
+ * settles conflicts, but only for properties the shell has declared at all
+ * (§5.5). A real book — Heydon Pickering's *Every Layout* — ships
+ * `@media (min-width: 800px) { body { max-inline-size: 68ch } }`, which the
+ * shell never opposed, and the two-column viewport became a 68ch column with
+ * 400px of empty screen beside it. That book's rule is ordinary; the invariant
+ * has to be stronger than ordinary.
  *
  * Every class and id selector below is namespaced (`epubsite-`), and that is a
  * correctness rule rather than tidiness: these selectors are evaluated against a
@@ -23,34 +37,38 @@
  * Theming is `light-dark()` against `:root`'s custom properties, pinned by
  * `--theme` through `data-theme` (§11.2) — see the palette below.
  */
-@layer epub, shell;
+@layer shell-invariants, epub, shell;
 
-@layer shell {
-  /*
-   * Theme (§11.2).
-   *
-   * `--theme auto` emits no attribute, so these defaults follow the operating
-   * system and keep following it if it changes at dusk. `light` and `dark` set
-   * `color-scheme`, which is what makes the choice explicit *and* correct for
-   * everything the page does not style itself — form controls, scrollbars, the
-   * browser's own focus rings.
-   *
-   * The two palettes live in one `light-dark()` per property rather than in two
-   * duplicated blocks, because duplicated palettes drift: somebody adds a colour
-   * to the light block, the dark block still works, and the difference is only
-   * visible to half the readers.
-   */
-  :root {
-    color-scheme: light dark;
-    --shell-fg: light-dark(#111, #e8e8e8);
-    --shell-bg: light-dark(#fff, #16181d);
-    --shell-surface: light-dark(#fafafa, #1d2027);
-    --shell-border: light-dark(#ddd, #333842);
-    --shell-control: light-dark(#ccc, #3a404b);
-    --shell-hover: light-dark(#ececec, #262b34);
-    --shell-current: light-dark(#e0e0e0, #313846);
-    --shell-muted: light-dark(#666, #9aa2b1);
-
+/*
+ * The shell's own box: <html> and <body>, and nothing below them.
+ *
+ * The list is the box rather than a list of things a book might do to it —
+ * display, position, size constraints, spacing, overflow, the grid tracks, the
+ * font, the palette — and it includes properties no book to hand has set
+ * (`max-inline-size`, `inset`, `transform`) because the cost of a line here is a
+ * line, and the cost of missing one is the reader's whole layout.
+ *
+ * `direction` is deliberately absent. A book may be `dir="rtl"`, the runtime
+ * syncs that onto <body> per chapter, and the grid follows the writing
+ * direction — that is the book's business. Freezing it would turn every RTL book
+ * back to LTR.
+ */
+@layer shell-invariants {
+  html {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    float: none !important;
+    box-sizing: border-box !important;
+    inline-size: auto !important;
+    max-inline-size: none !important;
+    min-inline-size: 0 !important;
+    block-size: 100% !important;
+    max-block-size: 100% !important;
+    min-block-size: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
     /*
      * Both panes are a fixed width, and a fixed-width column can only stay still
      * if the text inside it may break. Without this a single long token makes the
@@ -65,44 +83,8 @@
      * `break-word` rather than `anywhere`: it breaks a word only when it would
      * otherwise overflow, and leaves intrinsic sizing alone, so tables and floats
      * still measure the way the book intended.
-     *
-     * Declared on `:root` because it is inherited, which covers book content the
-     * shell has never heard of as well as its own chrome.
      */
-    overflow-wrap: break-word;
-
-    /*
-     * One line of toolbar controls, declared once.
-     *
-     * Two rules need this number and one of them is a layout invariant: the
-     * narrow-screen drawer is an overlay, and an overlay that covers the control
-     * which opens it cannot be closed again — which is exactly what happened,
-     * because the drawer covered the whole viewport height including the
-     * toolbar. The drawer therefore starts *below* the toolbar, and for that to
-     * mean anything the toolbar must be exactly this tall rather than
-     * approximately it.
-     *
-     * So the toolbar's height comes from this token and the drawer's top inset
-     * comes from the same token: they cannot drift apart, because there is only
-     * one number.
-     */
-    --shell-toolbar-height: 3.25rem;
-  }
-
-  :root[data-theme='light'] {
-    color-scheme: light;
-  }
-
-  :root[data-theme='dark'] {
-    color-scheme: dark;
-  }
-
-  html {
-    display: block !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    height: 100% !important;
-    overflow: hidden !important;
+    overflow-wrap: break-word !important;
     /*
      * `hidden` is not enough, and this is the second half of the layout fix.
      *
@@ -115,7 +97,18 @@
      * Written second, with no `@supports`, because an unsupported declaration is
      * simply dropped: a browser without `clip` keeps the `hidden` above.
      */
+    overflow: hidden !important;
     overflow: clip !important;
+    /*
+     * Moving or scaling the whole document is a layout change rather than a
+     * typographic one: the two panes would leave the viewport while the reader
+     * had no way to scroll to them.
+     */
+    transform: none !important;
+    translate: none !important;
+    rotate: none !important;
+    scale: none !important;
+    zoom: 1 !important;
   }
 
   body {
@@ -146,15 +139,104 @@
      * height, and the explicit `0` minimum stops the contents from inflating it.
      */
     grid-template-rows: minmax(0, 1fr) !important;
+    grid-template-areas: none !important;
+    gap: 0 !important;
+    box-sizing: border-box !important;
+    position: static !important;
+    inset: auto !important;
+    float: none !important;
+    inline-size: auto !important;
+    max-inline-size: none !important;
+    min-inline-size: 0 !important;
+    block-size: 100% !important;
+    max-block-size: 100% !important;
+    min-block-size: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    height: 100% !important;
+    border: 0 !important;
     overflow: hidden !important;
     overflow: clip !important;
-    font-family: system-ui, sans-serif;
-    line-height: 1.5;
-    color: var(--shell-fg);
-    background: var(--shell-bg);
+    /*
+     * Repeated from <html> because inheritance is the fallback, not a shield: a
+     * book's `body { overflow-wrap: normal }` is a declaration on *this* element,
+     * and a declared value beats an inherited one no matter which layer it is in
+     * (§5.10).
+     */
+    overflow-wrap: break-word !important;
+    font-family: system-ui, sans-serif !important;
+    line-height: 1.5 !important;
+    color: var(--shell-fg) !important;
+    background: var(--shell-bg) !important;
+    transform: none !important;
+    translate: none !important;
+    rotate: none !important;
+    scale: none !important;
+    zoom: 1 !important;
+  }
+
+  /*
+   * The narrow view is the same contract with one track instead of two. It has to
+   * live in this layer: an `!important` in a later layer loses to an `!important`
+   * here, so leaving it below would let the base two-column rule win and a tablet
+   * in portrait would keep the permanent sidebar.
+   */
+  @media (max-width: 52.5rem) {
+    body {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+  }
+}
+
+@layer shell {
+  /*
+   * Theme (§11.2).
+   *
+   * `--theme auto` emits no attribute, so these defaults follow the operating
+   * system and keep following it if it changes at dusk. `light` and `dark` set
+   * `color-scheme`, which is what makes the choice explicit *and* correct for
+   * everything the page does not style itself — form controls, scrollbars, the
+   * browser's own focus rings.
+   *
+   * The two palettes live in one `light-dark()` per property rather than in two
+   * duplicated blocks, because duplicated palettes drift: somebody adds a colour
+   * to the light block, the dark block still works, and the difference is only
+   * visible to half the readers.
+   */
+  :root {
+    color-scheme: light dark;
+    --shell-fg: light-dark(#111, #e8e8e8);
+    --shell-bg: light-dark(#fff, #16181d);
+    --shell-surface: light-dark(#fafafa, #1d2027);
+    --shell-border: light-dark(#ddd, #333842);
+    --shell-control: light-dark(#ccc, #3a404b);
+    --shell-hover: light-dark(#ececec, #262b34);
+    --shell-current: light-dark(#e0e0e0, #313846);
+    --shell-muted: light-dark(#666, #9aa2b1);
+
+    /*
+     * One line of toolbar controls, declared once.
+     *
+     * Two rules need this number and one of them is a layout invariant: the
+     * narrow-screen drawer is an overlay, and an overlay that covers the control
+     * which opens it cannot be closed again — which is exactly what happened,
+     * because the drawer covered the whole viewport height including the
+     * toolbar. The drawer therefore starts *below* the toolbar, and for that to
+     * mean anything the toolbar must be exactly this tall rather than
+     * approximately it.
+     *
+     * So the toolbar's height comes from this token and the drawer's top inset
+     * comes from the same token: they cannot drift apart, because there is only
+     * one number.
+     */
+    --shell-toolbar-height: 3.25rem;
+  }
+
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
   }
 
   /* ---------------------------------------------------------------- sidebar */
@@ -635,10 +717,6 @@
    * 1280 wide when turned, which is above the threshold and gets the sidebar.
    */
   @media (max-width: 52.5rem) {
-    body {
-      grid-template-columns: minmax(0, 1fr) !important;
-    }
-
     #epubsite-frame {
       grid-column: 1;
     }

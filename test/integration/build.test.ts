@@ -424,8 +424,10 @@ describe('build — a site that is the book', () => {
     const css = (await readTree(site.out)).get('_epubsite_assets/shell.css')?.content.toString('utf8')
 
     // The cascade layer declaration is what keeps EPUB styles from breaking the
-    // layout, so its presence is worth asserting rather than assuming.
-    expect(css).toContain('@layer epub, shell;')
+    // layout, so its presence is worth asserting rather than assuming. The order
+    // matters as much as the names: `shell-invariants` first is what lets the
+    // body's `!important` box rules outrank a book's `!important` (§5.5).
+    expect(css).toContain('@layer shell-invariants, epub, shell;')
   })
 
   it('reports chapters and resources', async () => {

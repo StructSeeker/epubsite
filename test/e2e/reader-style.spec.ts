@@ -2,7 +2,7 @@
  * Whose styles apply to the book, and whose names the reader's chrome uses
  * (spec §1.2, §5.5, §5.13).
  *
- * Two properties, and both fail silently if they break:
+ * Three properties, each of which fails silently if it breaks:
  *
  *   - **`--content-style reader`** swaps the book's stylesheets for the reader's
  *     own. A build that did nothing would still produce a page that *looks*
@@ -15,8 +15,15 @@
  *     unmoved. The control matters as much as the assertion — the book's sheet is
  *     proved live by one of its rules reaching the book's own markup, otherwise
  *     "nothing was hidden" could just mean "nothing was loaded".
+ *   - **The shell's body box** cannot be resized, padded or moved by the book.
+ *     Layer order only settles conflicts (§5.5), so a `body` property the shell
+ *     never declared is not settled at all — Every Layout ships
+ *     `@media (min-width: 800px) { body { max-inline-size: 68ch } }`, which shrank
+ *     the whole viewport into a column — and because `!important` *reverses* the
+ *     layer order, a book's `!important` outranks `@layer shell`. That fixture
+ *     carries both, ordinary and shouting.
  *
- * Both sites are built by the real library and served by the real `serve`, so
+ * All three sites are built by the real library and served by the real `serve`, so
  * what is under test is the artifact a reader receives.
  */
 import { expect, test, type Page } from '@playwright/test'
@@ -97,6 +104,61 @@ function hostileBook(): Buffer {
   })
 }
 
+/**
+ * The every-layout.surge.sh failure, reduced to its rules, plus a book that
+ * shouts.
+ *
+ * The first block is the real world: `max-inline-size` on `body` inside a media
+ * query, a property the shell had never declared, which narrowed the two-pane
+ * viewport to 68ch. The second block is the same box attacked with `!important`,
+ * which is not a specificity contest the shell can win inside `@layer shell`:
+ * importants reverse layer order, so the shell's only defence is to declare
+ * these in a layer that comes *before* `epub` (§5.5). `inline-size` and not
+ * `max-inline-size` there, so each assertion is produced by exactly one rule.
+ */
+const LAYOUT_CSS = `body {
+  padding-inline: clamp(1rem, 4vw, 2rem);
+  padding-block: 0;
+}
+@media (min-width: 800px) {
+  body {
+    max-inline-size: 68ch;
+    margin-inline: auto;
+    padding-inline: 0;
+  }
+}
+body {
+  display: block !important;
+  grid-template-columns: 1fr !important;
+  gap: 2rem !important;
+  inline-size: 40ch !important;
+  margin: 4rem !important;
+  padding: 3rem !important;
+  border: 8px solid rgb(7, 8, 9) !important;
+  position: relative !important;
+  inset-block-start: 2rem !important;
+  transform: scale(0.5) !important;
+}`
+
+const LAYOUT_CH01 = `<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>One</title>
+  <link rel="stylesheet" href="../Styles/layout.css"/>
+</head>
+<body>
+  <h1>One</h1>
+  <p id="first">First paragraph.</p>
+</body>
+</html>`
+
+function layoutBook(): Buffer {
+  return sampleEpub({
+    'OEBPS/text/ch01.xhtml': LAYOUT_CH01,
+    'OEBPS/Styles/layout.css': LAYOUT_CSS,
+  })
+}
+
 // Per-worker and per-run, for the reasons `site.spec.ts` gives: `beforeAll` runs
 // once per worker under `fullyParallel`, and two suites sharing a directory would
 // delete each other's site mid-test.
@@ -112,10 +174,12 @@ test.beforeAll(async () => {
 
   const styled = await writeEpub(workDir, styledBook(), 'styled.epub')
   const hostile = await writeEpub(workDir, hostileBook(), 'hostile.epub')
+  const layout = await writeEpub(workDir, layoutBook(), 'layout.epub')
 
   await site(styled, 'book')
   await site(styled, 'reader', { contentStyle: 'reader' })
   await site(hostile, 'hostile')
+  await site(layout, 'layout')
 })
 
 test.afterAll(async () => {
@@ -258,5 +322,57 @@ test.describe('the shell’s namespace', () => {
       await expect(page.locator(control), `${control} was hidden`).toBeVisible()
     }
     expect(failures).toEqual([])
+  })
+})
+
+test.describe('the shell’s body', () => {
+  test('the book cannot resize, pad, border, move or scale it', async ({ page }) => {
+    await openChapter(page, urlOf('layout'))
+
+    const box = await page.evaluate(() => {
+      const style = getComputedStyle(document.body)
+      const rect = document.body.getBoundingClientRect()
+      const content = document.querySelector('#epubsite-content') as HTMLElement
+      return {
+        innerWidth,
+        innerHeight,
+        display: style.getPropertyValue('display'),
+        maxInlineSize: style.getPropertyValue('max-inline-size'),
+        gap: style.getPropertyValue('gap'),
+        marginBlockStart: style.getPropertyValue('margin-block-start'),
+        paddingInlineStart: style.getPropertyValue('padding-inline-start'),
+        borderBlockStartWidth: style.getPropertyValue('border-block-start-width'),
+        position: style.getPropertyValue('position'),
+        insetBlockStart: style.getPropertyValue('inset-block-start'),
+        transform: style.getPropertyValue('transform'),
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        contentRight: content.getBoundingClientRect().right,
+      }
+    })
+
+    // The ordinary declaration the shell had never opposed. This one alone is the
+    // every-layout.surge.sh defect: 68ch of body inside a 1038px viewport.
+    expect(box.maxInlineSize).toBe('none')
+
+    // And the shouting ones, which only an earlier layer can outrank.
+    expect(box.display).toBe('grid')
+    expect(box.gap).toBe('0px')
+    expect(box.marginBlockStart).toBe('0px')
+    expect(box.paddingInlineStart).toBe('0px')
+    expect(box.borderBlockStartWidth).toBe('0px')
+    expect(box.position).toBe('static')
+    expect(box.insetBlockStart).toBe('auto')
+    expect(box.transform).toBe('none')
+
+    // The consequence a reader would report: the body is the viewport again, and
+    // the content pane's right edge — the reader's right margin — is on screen.
+    expect(box.x).toBe(0)
+    expect(box.y).toBe(0)
+    expect(Math.round(box.width)).toBe(box.innerWidth)
+    expect(Math.round(box.height)).toBe(box.innerHeight)
+    expect(box.contentRight).toBeLessThanOrEqual(box.innerWidth)
   })
 })
