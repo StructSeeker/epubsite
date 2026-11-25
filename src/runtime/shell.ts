@@ -20,6 +20,7 @@ import { wireDrawer } from './drawer'
 import { loadShellData } from './data'
 import { syncChapter, type ChapterSyncContext } from './chapter'
 import { entryRequestUrl, entryUrl, isStaleEntryResponse, resolveEntry } from './entry'
+import { repairNamespaces } from './namespaces'
 import { wirePager } from './pager'
 import { wireShare } from './share'
 import { wireSearch } from './search'
@@ -175,12 +176,15 @@ function wireChapterSync(context: ChapterSyncContext): void {
 
   document.body.addEventListener('htmx:afterSwap', (event) => {
     const detail = (event as CustomEvent<{ target?: Element }>).detail
+    const content =
+      detail.target instanceof Element ? detail.target : document.getElementById('epubsite-content')
+    // First, because it is the only step that changes the tree's identity: a
+    // book that writes `<mml:math>` arrives here as an unknown HTML element
+    // (§5.15), and everything below — and the reader — wants the real one.
+    repairNamespaces(content)
     // While the base still names the chapter this markup came from. htmx's
     // history snapshot re-inserts it later, after the address bar has moved on.
-    absolutizeContent(
-      detail.target instanceof Element ? detail.target : document.getElementById('epubsite-content'),
-      document.baseURI,
-    )
+    absolutizeContent(content, document.baseURI)
     sync()
     focusContent()
   })
